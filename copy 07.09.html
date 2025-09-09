@@ -1627,43 +1627,7 @@
     // =======================================================================
     // KROK 3: ZASTĄP STARY BLOK TYM NOWYM
     // =======================================================================
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        const isLoggedIn = !!(session && session.user);
-        authIconUser.classList.toggle('hidden', isLoggedIn);
-        authIconLogout.classList.toggle('hidden', !isLoggedIn);
-        
-        console.log('Auth event:', event, 'user:', session?.user?.email || 'none');
-
-        if (isLoggedIn) {
-            userInfo.classList.remove('hidden');
-            userEmailDisplay.textContent = session.user.email;
-            
-            // Jeśli to pierwsze zalogowanie w tej sesji lub odświeżenie strony, zsynchronizuj dane
-            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                await syncCloudToLocal();
-            }
-
-            if (appInitDone) {
-                await renderDecksList();
-                // Po synchronizacji, upewnij się, że sesja nauki jest poprawnie załadowana
-                const currentDeckId = await getAppData('activeDeckId');
-                if(currentDeckId) {
-                   await setActiveDeck(currentDeckId);
-                }
-            } else {
-                window.addEventListener('app:init-done', async () => {
-                    await renderDecksList();
-                }, { once: true });
-            }
-        } else { // Użytkownik nie jest zalogowany
-            userInfo.classList.add('hidden');
-            if (appInitDone) {
-                await clearLocalUserData();
-            }
-            decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Login to see your decks.</p>';
-        }
-    });
-
+    
     await handleAuthRedirectFromEmail();
 
     // --- DECKS (local + cloud unified) ---
