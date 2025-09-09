@@ -364,6 +364,8 @@
   </div>
 
   <script>
+  
+  
 // ===================================================================================
 // KEYWORD APP - FULL SCRIPT (ENGLISH VERSION) - UPDATED
 // ===================================================================================
@@ -419,6 +421,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- APP STATE ---
 
   // NOWA FUNKCJA DO ODŚWIEŻANIA STANU APLIKACJI
+  // =======================================================================
+    // KROK 1: WKLEJ TEN BLOK KODU
+    // =======================================================================
+    async function clearLocalUserData() {
+        console.log('Clearing local user data from IndexedDB...');
+        await waitForDB();
+
+        const storesToClear = ['decks', 'words', 'user_stories']; 
+        
+        const transaction = db.transaction(storesToClear, 'readwrite');
+
+        for (const storeName of storesToClear) {
+            try {
+                const store = transaction.objectStore(storeName);
+                await idbRequest(store.clear());
+            } catch(e) { 
+                console.warn(`Could not clear store ${storeName}:`, e); 
+            }
+        }
+
+        await new Promise(resolve => transaction.oncomplete = resolve);
+
+        await setAppData('activeDeckId', null);
+        activeDeckId = null;
+        activeDeckNameEl.textContent = 'None';
+        words = []; 
+        startSession();
+
+        console.log('Local user data cleared.');
+    }
+
   async function reinitializeAppState() {
     console.log('App is visible again. Re-initializing state...');
     try {
@@ -784,65 +817,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function processAnswer(difficulty) {
-    if (!currentCard) return;
+  // =======================================================================
+    // KROK 2: ZASTĄP STARĄ FUNKCJĘ TĄ NOWĄ
+    // =======================================================================
+    async function processAnswer(difficulty) {
+        if (!currentCard) return;
 
-    if (difficulty === 1) {
-      currentCard.interval = 0;
-      reviewQueue.unshift(currentCard);
-    } else if (difficulty === 3) {
-      currentCard.isLearning = false;
-      currentCard.interval = Math.max(1, (currentCard.interval || 0) * (currentCard.easeFactor || 2.5));
-      currentCard.easeFactor = (currentCard.easeFactor || 2.5) + 0.1;
-      // Zliczanie zielonych kciuków
-      currentCard.successCount = (currentCard.successCount || 0) + 1;
-      if (currentCard.successCount === 3 && !currentCard.learnedDate) {
-        currentCard.learnedDate = getToday().toISOString(); // dla statystyk i historii
-        updateLearnedCount(); // odśwież licznik w UI
-      }
-    }
-
-    currentCard.nextReview = addDays(getToday(), Math.round(currentCard.interval || 0)).toISOString();
-
-    const wordStore = getTransaction('words', 'readwrite');
-    wordStore.put(currentCard);
-
-    const { data } = await supabaseClient.auth.getUser();
-    const user = data?.user;
-
-    if (user) {
-      const progressData = {
-        user_id: user.id,
-        word_english: currentCard.english,
-        deck_id: currentCard.deckId,
-        interval: currentCard.interval,
-        ease_factor: currentCard.easeFactor,
-        next_review: currentCard.nextReview,
-        learned_date: currentCard.learnedDate || null
-      };
-
-      try {
-        const { error } = await supabaseClient
-          .from('user_word_progress')
-          .upsert(progressData, { onConflict: 'user_id, word_english' });
-
-        if (error) {
-          console.error('Error saving progress to Supabase:', error);
+        if (difficulty === 1) {
+            currentCard.interval = 0;
+            reviewQueue.unshift(currentCard);
+        } else if (difficulty === 3) {
+            currentCard.isLearning = false;
+            currentCard.interval = Math.max(1, (currentCard.interval || 0) * (currentCard.easeFactor || 2.5));
+            currentCard.easeFactor = (currentCard.easeFactor || 2.5) + 0.1;
+            currentCard.successCount = (currentCard.successCount || 0) + 1;
+            if (currentCard.successCount === 3 && !currentCard.learnedDate) {
+                currentCard.learnedDate = getToday().toISOString();
+                updateLearnedCount();
+            }
         }
-      } catch (e) {
-        console.error('Network or other error saving progress:', e);
-      }
-    }
 
-    // Przerwa co 100 (możesz usunąć jeśli chcesz bez zatrzymań)
-    sessionWordCounter++;
-    if (sessionWordCounter > 0 && sessionWordCounter % 100 === 0 && (newQueue.length > 0 || reviewQueue.length > 0)) {
-      showSummary();
-    } else {
-      nextCard();
-    }
-  }
+        currentCard.nextReview = addDays(getToday(), Math.round(currentCard.interval || 0)).toISOString();
 
+        const wordStore = getTransaction('words', 'readwrite');
+        wordStore.put(currentCard);
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+
+        if (user) {
+            const progressData = {
+                user_id: user.id,
+                word_id: currentCard.id, // Używamy word_id
+                interval: currentCard.interval,
+                ease_factor: currentCard.easeFactor,
+                next_review: currentCard.nextReview,
+                learned_date: currentCard.learnedDate || null
+            };
+
+            try {
+                const { error } = await supabaseClient
+                    .from('user_word_progress')
+                    .upsert(progressData, { onConflict: 'user_id, word_id' }); // Poprawiony onConflict
+
+                if (error) {
+                    console.error('Error saving progress to Supabase:', error);
+                }
+            } catch (e) {
+                console.error('Network or other error saving progress:', e);
+            }
+        }
+
+        sessionWordCounter++;
+        if (sessionWordCounter > 0 && sessionWordCounter % 100 === 0 && (newQueue.length > 0 || reviewQueue.length > 0)) {
+            showSummary();
+        } else {
+            nextCard();
+        }
+    }
   // --- UI FLOW & CARD DISPLAY ---
   function updateLearnedCount() {
     const count = words.filter(w => (w.successCount || 0) >= 3).length;
@@ -1546,30 +1577,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     else alert('Password reset email sent. Check your inbox.');
   });
 
-  logoutBtn.addEventListener('click', async () => {
-    const { error } = await supabaseClient.auth.signOut();
-    if (error) console.error('Logout error:', error);
-    closeModal(authModal);
-  });
+ // =======================================================================
+    // KROK 3A: ZASTĄP STARY BLOK TYM NOWYM
+    // =======================================================================
+    logoutBtn.addEventListener('click', async () => {
+        await clearLocalUserData(); // <-- Tu jest nasza poprawka
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) console.error('Logout error:', error);
+        closeModal(authModal);
+    });
 
-  supabaseClient.auth.onAuthStateChange(async (event, session) => {
-    const isLoggedIn = !!(session && session.user);
-    authIconUser.classList.toggle('hidden', isLoggedIn);
-    authIconLogout.classList.toggle('hidden', !isLoggedIn);
-    if (isLoggedIn) {
-      userInfo.classList.remove('hidden');
-      userEmailDisplay.textContent = session.user.email;
-      if (appInitDone) {
-        await renderDecksList();
-      } else {
-        window.addEventListener('app:init-done', () => { renderDecksList(); }, { once: true });
-      }
-    } else {
-      userInfo.classList.add('hidden');
-      decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
-    }
-    console.log('Auth event:', event, 'user:', session?.user?.email || 'none');
-  });
+// =======================================================================
+    // KROK 3B: ZASTĄP STARY BLOK TYM NOWYM
+    // =======================================================================
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        const isLoggedIn = !!(session && session.user);
+        authIconUser.classList.toggle('hidden', isLoggedIn);
+        authIconLogout.classList.toggle('hidden', !isLoggedIn);
+        
+        if (isLoggedIn) {
+            userInfo.classList.remove('hidden');
+            userEmailDisplay.textContent = session.user.email;
+            if (appInitDone) {
+                await renderDecksList();
+            } else {
+                window.addEventListener('app:init-done', () => { renderDecksList(); }, { once: true });
+            }
+        } else {
+            userInfo.classList.add('hidden');
+            // Jeśli aplikacja jest już zainicjowana, wyczyść dane
+            if (appInitDone) {
+                await clearLocalUserData(); // <-- Tu jest nasza poprawka
+            }
+            decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
+        }
+        console.log('Auth event:', event, 'user:', session?.user?.email || 'none');
+    });
 
   await handleAuthRedirectFromEmail();
 
