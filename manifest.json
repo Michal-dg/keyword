@@ -1,0 +1,10 @@
+{
+    "name": "Keyword English Trainer",
+    "short_name": "Keyword",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0284c7",
+    "description": "An app to learn English vocabulary.",
+    "icons": []
+}
