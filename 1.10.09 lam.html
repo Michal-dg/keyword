@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keyword: Master English</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Keyword">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="icon" href="/icons/icon-192x192.png" type="image/png">
+  <script src="words_db_en.js"></script>
+  <script src="stories_db_en.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; }
+    .card { transform-style: preserve-3d; transition: transform 0.6s; }
+    .card.is-flipped { transform: rotateY(180deg); }
+    .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: translateZ(0); }
+    .card-face-back { transform: rotateY(180deg) translateZ(1px); }
+    .btn-difficulty { transition: all 0.2s ease-in-out; }
+    .btn-difficulty:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .modal { transition: opacity 0.3s ease; }
+    .modal-content { transition: transform 0.3s ease; }
+    #header-image-container:hover #upload-header-btn, .card-face-front:hover #upload-global-bg-btn { opacity: 1; }
+    .perspective-1000 { perspective: 1000px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen">
+  <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="header-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="story-upload-input" class="hidden" accept=".txt">
+  <input type="file" id="global-bg-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="story-bg-upload-input" class="hidden" accept="image/*">
+
+  <div id="app" class="w-full max-w-md mx-auto p-4 sm:p-6">
+    <header class="text-center mb-4">
+      <div id="header-image-container" class="relative w-full aspect-[3.5/1] bg-slate-200 rounded-lg mb-4 overflow-hidden group">
+        <img id="header-image" src="images/default-header.jpg" alt="Header" class="w-full h-full object-cover">
+        <button id="upload-header-btn" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <span class="ml-2">Change Photo</span>
+        </button>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-sky-600">Keyword</h1>
+      <p class="text-slate-500 mt-1">Master English, word by word!</p>
+    </header>
+
+    <nav class="relative flex justify-center items-center space-x-2 sm:space-x-4 mb-6 border-b pb-4">
+      <button id="show-auth-btn" title="User Account" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg id="auth-icon-user" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <svg id="auth-icon-logout" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </button>
+      <button id="show-decks-btn" title="Decks" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"></path><path d="M20 12v4H4v-4"></path><path d="M4 8h16"></path></svg>
+      </button>
+      <button id="show-learned-words-btn" title="Learned Words" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+      </button>
+      <button id="show-stats-btn" title="Progress Chart" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      </button>
+      <button id="show-stories-btn" title="Story Library" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"></path></svg>
+      </button>
+      <button id="show-review-btn" title="Review Session" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
+      </button>
+    </nav>
+
+    <main id="main-content">
+      <div class="text-center mb-4">
+        <p class="text-sm text-slate-500">
+          Active Deck: <strong id="active-deck-name" class="text-sky-600"></strong>
+        </p>
+      </div>
+
+      <div id="loading-state" class="text-center p-8">
+        <p class="text-slate-500">Loading application and database...</p>
+      </div>
+
+      <div id="summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">Great work!</h2>
+        <p class="text-slate-600 mb-6">Masz świetną passę. Tak trzymaj!</p>
+        <button id="start-new-session-early" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">
+          Keep going!
+        </button>
+      </div>
+
+      <div id="learning-state" class="hidden">
+        <div class="flex justify-between items-center mb-4 text-sm">
+          <div class="bg-sky-100 text-sky-700 font-semibold px-3 py-1 rounded-full">New: <span id="new-count">0</span></div>
+          <div id="learned-counter-container" class="flex items-center space-x-2 bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-full text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span><span id="learned-count">0</span></span>
+          </div>
+          <div class="bg-amber-100 text-amber-700 font-semibold px-3 py-1 rounded-full">To Review: <span id="review-count">0</span></div>
+        </div>
+
+        <div id="flashcard-container" class="perspective-1000">
+          <div id="flashcard" class="card w-full h-[320px] sm:h-[350px] relative">
+            <div class="card-face card-face-front group flex flex-col items-center justify-center rounded-2xl shadow-lg p-6 text-center overflow-hidden">
+              <img id="card-front-bg" src="images/default-card-bg.jpg" class="absolute inset-0 w-full h-full object-cover">
+              <div id="card-front-overlay" class="absolute inset-0 bg-black/60 rounded-2xl"></div>
+              <button id="upload-global-bg-btn" title="Change card background" class="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition opacity-0 group-hover:opacity-100">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              </button>
+              <div class="relative z-10 flex flex-col items-center justify-between h-full w-full">
+                <button id="speak-btn-front" class="self-start text-white hover:text-slate-200 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                </button>
+                <div class="flex-grow flex flex-col items-center justify-center">
+                  <p class="text-slate-200 text-sm mb-4">Word <span id="card-rank">#1</span></p>
+                  <p id="card-english" class="text-4xl sm:text-5xl font-bold text-white"></p>
+                </div>
+                <button id="show-answer-btn" class="bg-white/20 text-white font-semibold py-2 px-6 rounded-lg hover:bg-white/40 transition-colors">
+                  Show Answer
+                </button>
+              </div>
+            </div>
+
+            <div class="card-face card-face-back flex flex-col justify-between bg-sky-500 text-white rounded-2xl shadow-lg p-4 text-center">
+              <div class="relative w-full h-32">
+                <img id="card-image" src="" alt="Helpful image" class="w-full h-full object-cover rounded-lg bg-sky-400">
+                <button id="add-image-btn" title="Add/Change image" class="absolute top-2 right-2 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </button>
+              </div>
+              <div class="flex-grow flex flex-col justify-center">
+                <p id="card-polish" class="text-3xl sm:text-4xl font-bold mb-2"></p>
+                <div class="text-sky-100 italic">
+                  <p id="card-example-en" class="mb-1"></p>
+                  <p id="card-example-pl" class="text-sm"></p>
+                </div>
+              </div>
+              <button id="speak-btn-back" class="absolute top-4 left-4 text-sky-100 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="difficulty-buttons" class="hidden grid grid-cols-2 gap-3 mt-6">
+          <button data-difficulty="1" class="btn-difficulty bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600 text-3xl">👎</button>
+          <button data-difficulty="3" class="btn-difficulty bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 text-3xl">👍</button>
+        </div>
+      </div>
+
+      <div id="test-state" class="hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-lg">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Test</h2>
+            <p class="text-slate-500"><span id="test-current-question">1</span> / <span id="test-total-questions">10</span></p>
+          </div>
+          <p id="test-question" class="text-3xl font-bold text-center mb-6 h-16"></p>
+          <div id="test-answers" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+          <button id="test-next-btn" class="hidden w-full mt-6 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600">Next Question</button>
+        </div>
+      </div>
+
+      <div id="test-summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">Test Results</h2>
+        <p class="text-slate-600 mb-6 text-4xl"><span id="test-score">0</span> / <span id="test-summary-total">0</span></p>
+        <button id="back-to-main-menu-btn" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">
+          Back to Main Menu
+        </button>
+      </div>
+    </main>
+
+    <footer class="text-center mt-6">
+      <button id="reset-progress" class="text-xs text-slate-400 hover:text-red-500 hover:underline">Reset Progress</button>
+    </footer>
+  </div>
+
+  <!-- Decks modal -->
+  <div id="decks-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Decks</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div id="decks-list" class="p-4 overflow-y-auto"></div>
+      <div class="p-4 border-t">
+        <form id="add-deck-form" class="flex gap-2">
+          <input type="text" id="new-deck-name" placeholder="New deck name..." class="flex-grow block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" required>
+          <button type="submit" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors text-sm">Create</button>
+        </form>
+      </div>
+
+      <div id="deck-details-view" class="p-4 border-t hidden">
+        <h3 class="font-bold mb-2 flex items-center gap-2">
+          Słówka w talii:
+          <span id="deck-details-name" class="text-sky-600"></span>
+          <span id="deck-details-source-badge" class="text-xs px-2 py-1 rounded-full bg-slate-200 text-slate-700"></span>
+        </h3>
+        <div id="deck-details-words" class="max-h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50"></div>
+        <button id="open-add-word-modal-btn" class="w-full mt-4 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors text-sm">Add Words to this Deck</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Learned words modal -->
+  <div id="learned-words-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Learned Words (<span id="learned-words-count">0</span>)</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div id="learned-words-list" class="p-4 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- Stats modal -->
+  <div id="stats-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Learning Progress</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div class="p-4">
+        <canvas id="stats-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stories modal -->
+  <div id="stories-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Story Library</h2>
+        <button id="add-story-btn" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors text-sm">Add New</button>
+      </header>
+      <div id="stories-list" class="p-4 overflow-y-auto flex-grow"></div>
+      <footer class="p-2 border-t">
+        <button class="close-modal-btn w-full text-slate-500 hover:text-slate-800 p-2">Close</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Story viewer modal -->
+  <div id="story-viewer-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div id="story-viewer-bg-container" class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 bg-cover bg-center">
+      <header class="flex justify-between items-center p-4 border-b bg-white/70 backdrop-blur-none rounded-t-2xl">
+        <h2 id="story-viewer-title" class="text-xl font-bold truncate">...</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div id="story-viewer-content" class="p-6 overflow-y-auto flex-grow leading-relaxed bg-white/70 text-slate-900 backdrop-blur-none"></div>
+      <footer class="p-4 border-t flex justify-between items-center bg-white/70 backdrop-blur-none rounded-b-2xl">
+        <div class="flex items-center space-x-2">
+          <button id="upload-story-bg-btn" class="bg-slate-200 text-slate-700 font-semibold py-2 px-3 rounded-lg hover:bg-slate-300 transition-colors text-sm">Background</button>
+        </div>
+        <div class="flex items-center space-x-2">
+          <label for="speed-slider" class="text-sm text-slate-600">Speed:</label>
+          <input type="range" id="speed-slider" min="0.5" max="1.5" value="1" step="0.1" class="w-24">
+        </div>
+        <button id="listen-full-story-btn" class="bg-sky-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors flex items-center space-x-2">
+          <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+          <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12"></rect></svg>
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Add words modal -->
+  <div id="add-word-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Add words to deck: <span id="add-word-deck-name" class="text-sky-600"></span></h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <form id="add-word-form" class="p-6 space-y-4">
+        <div>
+          <label for="bulk-words-input" class="block text-sm font-medium text-slate-700">Paste word list</label>
+          <p class="text-xs text-slate-500 mb-2">
+            Each word on a new line. Use a semicolon (;) to separate parts:
+            <code class="bg-slate-100 p-1 rounded">english;polish;english sentence;polish sentence</code>
+          </p>
+          <textarea id="bulk-words-input" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 h-48" placeholder="house;dom;This is my house.;To jest mój dom.&#10;to eat;jeść;I want to eat pizza.;Chcę zjeść pizzę."></textarea>
+        </div>
+        <button type="submit" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">Save Words</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Review modal -->
+  <div id="review-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Review Session</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div class="p-6 space-y-4">
+        <div class="p-4 border rounded-lg">
+          <h3 class="font-semibold mb-2">Last 20 learned words</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="last" data-count="20">Normal Study</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="20" data-direction="en2pl">Test EN→PL</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="20" data-direction="pl2en">Test PL→EN</button>
+          </div>
+        </div>
+        <div class="p-4 border rounded-lg">
+          <h3 class="font-semibold mb-2">Last 50 learned words</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="last" data-count="50">Normal Study</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="50" data-direction="en2pl">Test EN→PL</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="50" data-direction="pl2en">Test PL→EN</button>
+          </div>
+        </div>
+        <div class="p-4 border rounded-lg">
+          <h3 class="font-semibold mb-2">Words learned today</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="today">Normal Study</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="today" data-direction="en2pl">Test EN→PL</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="today" data-direction="pl2en">Test PL→EN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth modal -->
+  <div id="auth-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Login or Register</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div class="p-6">
+        <form id="auth-form" class="space-y-4">
+          <div>
+            <label for="auth-email" class="block text-sm font-medium text-slate-700">Email</label>
+            <input type="email" id="auth-email" required autocomplete="email" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+          </div>
+          <div>
+            <label for="auth-password" class="block text-sm font-medium text-slate-700">Password</label>
+            <input type="password" id="auth-password" required autocomplete="current-password" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+          </div>
+          <div id="auth-error-message" class="text-red-500 text-sm hidden"></div>
+          <div class="flex gap-4">
+            <button id="login-btn" type="submit" class="flex-1 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">Login</button>
+            <button id="register-btn" type="submit" class="flex-1 bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg hover:bg-slate-300 transition-colors">Register</button>
+          </div>
+        </form>
+
+        <div class="flex items-center justify-between mt-3 text-xs">
+          <button id="resend-confirm-btn" class="text-sky-600 hover:underline">Resend confirmation</button>
+          <button id="forgot-password-btn" class="text-slate-500 hover:underline">Forgot password?</button>
+        </div>
+
+        <div id="auth-success-message" class="hidden mt-4 p-4 bg-green-100 text-green-700 rounded-lg text-center">
+          <p>We've sent a confirmation link to your email. Check your inbox to complete the registration.</p>
+        </div>
+        <div id="auth-login-success" class="hidden mt-4 p-2 bg-green-100 text-green-700 rounded text-center text-sm">
+          Logged in successfully.
+        </div>
+        <div id="user-info" class="hidden mt-4 text-center">
+          <p>Logged in as: <strong id="user-email-display"></strong></p>
+          <button id="logout-btn" class="mt-4 w-full bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    // --- SUPABASE & APP CONFIGURATION ---
+    const SUPABASE_URL = 'https://elneujplpdoruvrvzvzd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmV1anBscGRvcnV2cnZ6dnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDQ3NjYsImV4cCI6MjA3MjM4MDc2Nn0.YIJYmt8KeiXH0iFS_Pk6ErIkyKZpPDsi29G83VItjCc';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Supabase client initialized successfully.');
+
+    const ENGLISH_ACCENT = 'en-GB';
+    const REVIEW_IGNORE_DATE = true;
+    const DAILY_NEW_LIMIT = Infinity;
+
+    if (typeof initialWordList === 'undefined') {
+      document.getElementById('loading-state').innerHTML = '<p class="text-red-500 font-bold">Error: Could not load word database. Make sure `words_db_en.js` is in the same folder.</p>';
+      return;
+    }
+
+    // 1) Handle auth redirect (signup/recovery)
+    async function handleAuthRedirectFromEmail() {
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+      if (!hash) return;
+      const params = new URLSearchParams(hash);
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      const type = params.get('type');
+      if (access_token && refresh_token) {
+        const { error } = await supabaseClient.auth.setSession({ access_token, refresh_token });
+        if (error) {
+          console.error('Error setting session from URL hash:', error);
+        } else {
+          console.log('Session restored from email link.');
+          try { closeModal(authModal); } catch (_) {}
+        }
+      }
+      if (type === 'recovery') {
+        const newPass = prompt('Enter new password:');
+        if (newPass) {
+          const { error: updateErr } = await supabaseClient.auth.updateUser({ password: newPass });
+          if (updateErr) alert('Could not update password: ' + updateErr.message);
+          else alert('Password updated. You are now logged in.');
+        }
+      }
+      history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // --- APP STATE ---
+    async function clearLocalUserData() {
+      console.log('Clearing local user data from IndexedDB...');
+      await waitForDB();
+      const storesToClear = ['decks', 'words', 'user_stories'];
+      const transaction = db.transaction(storesToClear, 'readwrite');
+      for (const storeName of storesToClear) {
+        try {
+          const store = transaction.objectStore(storeName);
+          await idbRequest(store.clear());
+        } catch(e) {
+          console.warn(`Could not clear store ${storeName}:`, e);
+        }
+      }
+      await new Promise(resolve => transaction.oncomplete = resolve);
+      await setAppData('activeDeckId', null);
+      activeDeckId = null;
+      activeDeckNameEl.textContent = 'None';
+      words = [];
+      startSession();
+      console.log('Local user data cleared.');
+    }
+
+    // Cloud -> Local sync (maps deck_id -> deckId and avoids deck name conflicts)
+    async function syncCloudToLocal() {
+      console.log('Starting cloud to local synchronization...');
+      await waitForDB();
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        console.log('Sync skipped: User not logged in.');
+        return;
+      }
+
+      try {
+        const { data: cloudDecks, error: decksError } = await supabaseClient
+          .from('decks')
+          .select('id, name')
+          .eq('user_id', user.id);
+
+        if (decksError) throw decksError;
+
+        let cloudWords = [];
+        if (Array.isArray(cloudDecks) && cloudDecks.length > 0) {
+          const deckIds = cloudDecks.map(d => d.id);
+          const { data: w, error: wordsError } = await supabaseClient
+            .from('words')
+            .select('id, english, polish, example_en, example_pl, deck_id')
+            .in('deck_id', deckIds);
+          if (wordsError) throw wordsError;
+          cloudWords = Array.isArray(w) ? w : [];
+        }
+
+        // Only write words; avoid deck name unique conflicts by not mirroring decks here
+        const tx = db.transaction(['words'], 'readwrite');
+        const wordsStore = tx.objectStore('words');
+
+        for (const w of cloudWords) {
+          const localWord = {
+            id: w.id,
+            deckId: w.deck_id,
+            english: w.english,
+            polish: w.polish,
+            example_en: w.example_en || '',
+            example_pl: w.example_pl || '',
+            interval: 0,
+            nextReview: getToday().toISOString(),
+            easeFactor: 2.5,
+            isLearning: false,
+            learnedDate: null,
+            image: null,
+            successCount: 0
+          };
+          await idbRequest(wordsStore.put(localWord));
+        }
+
+        await new Promise(resolve => tx.oncomplete = resolve);
+        console.log(`Synchronization complete: ${cloudDecks?.length || 0} decks and ${cloudWords.length} words synced.`);
+      } catch (error) {
+        console.error('Synchronization failed:', error);
+        alert('Could not synchronize your data from the cloud. Please check your connection and refresh.');
+      }
+    }
+
+    async function reinitializeAppState() {
+      console.log('App is visible again. Re-initializing state...');
+      try {
+        db = await openDB();
+        console.log('IndexedDB connection re-established.');
+        if (activeDeckId) {
+          await loadWordsForActiveDeck();
+        }
+        startSession();
+
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const isLoggedIn = !!(session && session.user);
+        authIconUser.classList.toggle('hidden', isLoggedIn);
+        authIconLogout.classList.toggle('hidden', !isLoggedIn);
+        console.log('State re-initialization complete.');
+      } catch (error) {
+        console.error('Failed to re-initialize app state:', error);
+        loadingState.innerHTML = '<p class="text-red-500">Wystąpił błąd podczas wznawiania aplikacji. Odśwież stronę.</p>';
+        loadingState.classList.remove('hidden');
+        learningState.classList.add('hidden');
+      }
+    }
+
+    // --- INDEXEDDB SETUP ---
+    const dbName = 'KeywordDB_v1';
+    const dbVersion = 1;
+    let db;
+    let appInitDone = false;
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, dbVersion);
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains('decks')) {
+            const deckStore = db.createObjectStore('decks', { keyPath: 'id', autoIncrement: true });
+            deckStore.createIndex('name', 'name', { unique: true });
+          }
+          if (!db.objectStoreNames.contains('words')) {
+            const wordStore = db.createObjectStore('words', { keyPath: 'id', autoIncrement: true });
+            wordStore.createIndex('deckId', 'deckId', { unique: false });
+          }
+          if (!db.objectStoreNames.contains('app_data')) {
+            db.createObjectStore('app_data', { keyPath: 'key' });
+          }
+          if (!db.objectStoreNames.contains('user_stories')) {
+            db.createObjectStore('user_stories', { keyPath: 'id', autoIncrement: true });
+          }
+        };
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = (event) => reject('IndexedDB error: ' + event.target.error);
+      });
+    }
+    function getTransaction(storeName, mode = 'readonly') {
+      if (!db) {
+        throw new Error('[IndexedDB] DB not initialized yet. Call waitForDB() before using getTransaction.');
+      }
+      return db.transaction(storeName, mode).objectStore(storeName);
+    }
+    function idbRequest(request) {
+      return new Promise((resolve, reject) => {
+        if (!request) return reject("Request is undefined");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+    function waitForDB() {
+      return new Promise((resolve) => {
+        if (db) return resolve();
+        const check = () => {
+          if (db) resolve();
+          else setTimeout(check, 30);
+        };
+        check();
+      });
+    }
+
+    // --- DATE HELPERS ---
+    const getToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+    const addDays = (date, days) => { const r = new Date(date); r.setDate(r.getDate() + days); return r; };
+    const formatDate = (date) => date.toLocaleDateString('en-GB');
+
+    // --- DOM ELEMENTS ---
+    const loadingState = document.getElementById('loading-state');
+    const summaryState = document.getElementById('summary-state');
+    const learningState = document.getElementById('learning-state');
+    const testState = document.getElementById('test-state');
+    const testSummaryState = document.getElementById('test-summary-state');
+    const newCountEl = document.getElementById('new-count');
+    const reviewCountEl = document.getElementById('review-count');
+    const cardRankEl = document.getElementById('card-rank');
+    const cardEnglishEl = document.getElementById('card-english');
+    const cardPolishEl = document.getElementById('card-polish');
+    const cardExampleEnEl = document.getElementById('card-example-en');
+    const cardExamplePlEl = document.getElementById('card-example-pl');
+    const cardImageEl = document.getElementById('card-image');
+    const showAnswerBtn = document.getElementById('show-answer-btn');
+    const difficultyButtons = document.getElementById('difficulty-buttons');
+    const flashcard = document.getElementById('flashcard');
+    const startNewSessionEarlyBtn = document.getElementById('start-new-session-early');
+    const resetProgressBtn = document.getElementById('reset-progress');
+    const speakBtnFront = document.getElementById('speak-btn-front');
+    const speakBtnBack = document.getElementById('speak-btn-back');
+    const learnedCountEl = document.getElementById('learned-count');
+    const addImageBtn = document.getElementById('add-image-btn');
+    const imageUploadInput = document.getElementById('image-upload-input');
+    const headerImageEl = document.getElementById('header-image');
+    const uploadHeaderBtn = document.getElementById('upload-header-btn');
+    const headerUploadInput = document.getElementById('header-upload-input');
+    const storyUploadInput = document.getElementById('story-upload-input');
+    const uploadGlobalBgBtn = document.getElementById('upload-global-bg-btn');
+    const globalBgUploadInput = document.getElementById('global-bg-upload-input');
+    const cardFrontBgEl = document.getElementById('card-front-bg');
+    const activeDeckNameEl = document.getElementById('active-deck-name');
+    const storyBgUploadInput = document.getElementById('story-bg-upload-input');
+    const uploadStoryBgBtn = document.getElementById('upload-story-bg-btn');
+    const storyViewerBgContainer = document.getElementById('story-viewer-bg-container');
+    const speedSlider = document.getElementById('speed-slider');
+
+    const showAuthBtn = document.getElementById('show-auth-btn');
+    const showDecksBtn = document.getElementById('show-decks-btn');
+    const showLearnedWordsBtn = document.getElementById('show-learned-words-btn');
+    const showStatsBtn = document.getElementById('show-stats-btn');
+    const showStoriesBtn = document.getElementById('show-stories-btn');
+    const showReviewBtn = document.getElementById('show-review-btn');
+
+    const authModal = document.getElementById('auth-modal');
+    const decksModal = document.getElementById('decks-modal');
+    const learnedWordsModal = document.getElementById('learned-words-modal');
+    const statsModal = document.getElementById('stats-modal');
+    const storiesModal = document.getElementById('stories-modal');
+    const storyViewerModal = document.getElementById('story-viewer-modal');
+    const addWordModal = document.getElementById('add-word-modal');
+    const reviewModal = document.getElementById('review-modal');
+
+    const decksListEl = document.getElementById('decks-list');
+    const learnedWordsList = document.getElementById('learned-words-list');
+    const statsChartCanvas = document.getElementById('stats-chart');
+    const learnedWordsCountEl = document.getElementById('learned-words-count');
+    const storiesListEl = document.getElementById('stories-list');
+    const addStoryBtn = document.getElementById('add-story-btn');
+    const storyViewerTitle = document.getElementById('story-viewer-title');
+    const storyViewerContent = document.getElementById('story-viewer-content');
+    const listenFullStoryBtn = document.getElementById('listen-full-story-btn');
+
+    const addWordForm = document.getElementById('add-word-form');
+    const addDeckForm = document.getElementById('add-deck-form');
+    const deckDetailsView = document.getElementById('deck-details-view');
+    const deckDetailsName = document.getElementById('deck-details-name');
+    const deckDetailsWords = document.getElementById('deck-details-words');
+    const openAddWordModalBtn = document.getElementById('open-add-word-modal-btn');
+    const addWordDeckName = document.getElementById('add-word-deck-name');
+
+    const loginBtn = document.getElementById('login-btn');
+    const registerBtn = document.getElementById('register-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const authErrorMessage = document.getElementById('auth-error-message');
+    const authSuccessMessage = document.getElementById('auth-success-message');
+    const userInfo = document.getElementById('user-info');
+    const authLoginSuccess = document.getElementById('auth-login-success');
+    const userEmailDisplay = document.getElementById('user-email-display');
+    const authIconUser = document.getElementById('auth-icon-user');
+    const authIconLogout = document.getElementById('auth-icon-logout');
+    const authForm = document.getElementById('auth-form');
+
+    const deckDetailsSourceBadge = document.getElementById('deck-details-source-badge');
+
+    // --- APP STATE ---
+    const synth = window.speechSynthesis;
+    let words = [];
+    let newQueue = [];
+    let reviewQueue = [];
+    let currentCard = null;
+    let statsChart = null;
+    let globalFlashcardBg = null;
+    let activeDeckId = null;
+    let storySpeechRate = 1.0;
+    let currentAudio = null;
+    let testWords = [];
+    let currentTestQuestionIndex = 0;
+    let testScore = 0;
+    let sessionWordCounter = 0;
+    let sessionCompleted = false;
+    let testDirection = 'en2pl';
+    let deckDetailsCurrentId = null;
+
+    // --- Active deck helpers ---
+    async function ensureLocalDeckRecord(id, name) {
+      try {
+        const store = getTransaction('decks');
+        const existing = await idbRequest(store.get(id));
+        if (!existing) {
+          const rw = getTransaction('decks', 'readwrite');
+          await idbRequest(rw.put({ id, name }));
+        } else if (name && existing.name !== name) {
+          const rw = getTransaction('decks', 'readwrite');
+          await idbRequest(rw.put({ ...existing, name }));
+        }
+      } catch (e) {
+        if (e?.name === 'ConstraintError') {
+          console.warn('Local mirror skipped: duplicate deck name in IndexedDB.');
+        } else {
+          console.warn('ensureLocalDeckRecord error:', e);
+        }
+      }
+    }
+    async function resolveDeckName(deckId) {
+      const local = await idbRequest(getTransaction('decks').get(deckId));
+      if (local?.name) return local.name;
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) {
+          const { data, error } = await supabaseClient
+            .from('decks')
+            .select('name')
+            .eq('id', deckId)
+            .single();
+          if (!error && data?.name) {
+            await ensureLocalDeckRecord(deckId, data.name);
+            return data.name;
+          }
+        }
+      } catch (_) {}
+      return 'Deck';
+    }
+    async function setActiveDeck(deckId, deckNameFromClick = null) {
+      activeDeckId = deckId;
+      await setAppData('activeDeckId', deckId);
+
+      if (deckNameFromClick) {
+        activeDeckNameEl.textContent = deckNameFromClick;
+        await ensureLocalDeckRecord(deckId, deckNameFromClick);
+      } else {
+        const name = await resolveDeckName(deckId);
+        activeDeckNameEl.textContent = name;
+      }
+
+      await loadWordsForActiveDeck();
+      startSession();
+      if (!decksModal.classList.contains('opacity-0')) {
+        renderDecksList();
+      }
+    }
+
+    // --- SPEECH SYNTHESIS (with fallback) ---
+    function nativeSpeak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEndCallback) {
+      if (!text) { if (onEndCallback) onEndCallback(); return; }
+      if (!('speechSynthesis' in window)) { if (onEndCallback) onEndCallback(); return; }
+      if (currentAudio && !currentAudio.paused) { currentAudio.pause(); currentAudio = null; }
+      if (synth.speaking) synth.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = lang;
+      utter.rate = rate;
+      utter.onend = () => { if (onEndCallback) onEndCallback(); };
+      synth.speak(utter);
+    }
+    async function speak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEndCallback) {
+      if (!text) { if (onEndCallback) onEndCallback(); return; }
+      if (currentAudio && !currentAudio.paused) { currentAudio.pause(); currentAudio = null; }
+      if (synth.speaking) synth.cancel();
+      try {
+        const response = await fetch('/.netlify/functions/get-speech', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, lang, rate })
+        });
+        const data = await response.json();
+        if (response.ok && data.audioContent) {
+          currentAudio = new Audio("data:audio/mp3;base64," + data.audioContent);
+          currentAudio.play();
+          currentAudio.onended = () => { if (onEndCallback) onEndCallback(); currentAudio = null; };
+        } else {
+          console.warn('Falling back to Web Speech API', data);
+          nativeSpeak(text, lang, rate, onEndCallback);
+        }
+      } catch (error) {
+        console.warn('TTS function not reachable, fallback to Web Speech API.', error);
+        nativeSpeak(text, lang, rate, onEndCallback);
+      }
+    }
+
+    // --- DATA MANAGEMENT (APP DATA) ---
+    async function getAppData(key) {
+      const store = getTransaction('app_data');
+      const result = await idbRequest(store.get(key));
+      return result ? result.value : undefined;
+    }
+    async function setAppData(key, value) {
+      const store = getTransaction('app_data', 'readwrite');
+      store.put({ key, value });
+    }
+
+    async function showDeckDetails(deck) {
+      await waitForDB();
+      deckDetailsView.classList.remove('hidden');
+      deckDetailsName.textContent = deck.name;
+      deckDetailsCurrentId = deck.id;
+
+      if (deckDetailsSourceBadge) {
+        const isCloud = deck.source === 'cloud';
+        deckDetailsSourceBadge.textContent = isCloud ? 'Cloud' : 'Prywatna';
+        deckDetailsSourceBadge.classList.remove('bg-violet-100','text-violet-700','bg-slate-200','text-slate-700');
+        if (isCloud) {
+          deckDetailsSourceBadge.classList.add('bg-violet-100','text-violet-700');
+        } else {
+          deckDetailsSourceBadge.classList.add('bg-slate-200','text-slate-700');
+        }
+      }
+
+      const wordStore = getTransaction('words');
+      const index = wordStore.index('deckId');
+      const wordsInDeck = await idbRequest(index.getAll(deck.id));
+      deckDetailsWords.innerHTML = wordsInDeck.length > 0
+        ? wordsInDeck.map(w => `<div class="text-sm py-1">${w.english} - ${w.polish}</div>`).join('')
+        : '<p class="text-slate-500 text-sm">No words in this deck.</p>';
+    }
+
+    // --- WORD MANAGEMENT & SRS LOGIC ---
+    async function loadWordsForActiveDeck() {
+      if (activeDeckId) {
+        const wordStore = getTransaction('words');
+        const index = wordStore.index('deckId');
+        words = await idbRequest(index.getAll(activeDeckId));
+      } else {
+        words = [];
+        return;
+      }
+
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      if (user && words.length > 0) {
+        try {
+          const wordIds = words.map(w => w.id);
+          const { data: progressRecords, error } = await supabaseClient
+              .from('user_word_progress')
+              .select('*')
+              .eq('user_id', user.id)
+              .in('word_id', wordIds);
+
+          if (error) {
+            console.error('Error fetching user progress:', error);
+            return;
+          }
+
+          if (progressRecords && progressRecords.length > 0) {
+            const progressMap = new Map(progressRecords.map(p => [p.word_id, p]));
+            words.forEach(word => {
+              if (progressMap.has(word.id)) {
+                const progress = progressMap.get(word.id);
+                word.interval = progress.interval;
+                word.easeFactor = progress.ease_factor;
+                word.nextReview = progress.next_review;
+                word.learnedDate = progress.learned_date || null;
+                if (word.learnedDate) {
+                  word.successCount = Math.max(word.successCount || 0, 3);
+                }
+              }
+            });
+
+            const tx = db.transaction('words', 'readwrite');
+            const store = tx.objectStore('words');
+            words.forEach(w => store.put(w));
+            await new Promise(res => tx.oncomplete = res);
+
+            console.log(`Merged ${progressMap.size} progress records from cloud into the current session.`);
+          }
+
+        } catch (e) {
+          console.error('Network or other error fetching progress:', e);
+        }
+      }
+    }
+
+    async function processAnswer(grade) {
+      if (!currentCard) return;
+
+      const today = getToday();
+      currentCard.easeFactor = currentCard.easeFactor || 2.5;
+      currentCard.interval = currentCard.interval || 0;
+      currentCard.successCount = currentCard.successCount || 0;
+
+      if (grade >= 3) {
+        currentCard.successCount += 1;
+        currentCard.easeFactor = Math.max(1.3, (currentCard.easeFactor + 0.1));
+        if (currentCard.successCount === 1) currentCard.interval = 1;
+        else if (currentCard.successCount === 2) currentCard.interval = 3;
+        else currentCard.interval = Math.max(1, Math.round(currentCard.interval * currentCard.easeFactor));
+
+        currentCard.nextReview = addDays(today, currentCard.interval).toISOString();
+        if (!currentCard.learnedDate && currentCard.successCount >= 3) {
+          currentCard.learnedDate = today.toISOString();
+        }
+        currentCard.isLearning = false;
+      } else {
+        currentCard.successCount = 0;
+        currentCard.easeFactor = Math.max(1.3, (currentCard.easeFactor - 0.2));
+        currentCard.interval = 0;
+        currentCard.nextReview = today.toISOString();
+
+        if (currentCard.type === 'new') {
+          newQueue.unshift(currentCard);
+        } else {
+          reviewQueue.unshift(currentCard);
+        }
+      }
+
+      try {
+        const store = getTransaction('words', 'readwrite');
+        await idbRequest(store.put(currentCard));
+      } catch (e) {
+        console.error('Failed to save to IndexedDB:', e);
+      }
+
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const looksLikeUUID = typeof currentCard.id === 'string' && currentCard.id.length > 20;
+        if (user && looksLikeUUID) {
+          await supabaseClient.from('user_word_progress').upsert({
+            user_id: user.id,
+            word_id: currentCard.id,
+            interval: currentCard.interval,
+            ease_factor: currentCard.easeFactor,
+            next_review: currentCard.nextReview,
+            learned_date: currentCard.learnedDate
+          }, { onConflict: 'user_id,word_id' });
+        }
+      } catch (e) {
+        console.warn('Cloud progress sync failed (will continue offline):', e?.message || e);
+      }
+
+      updateCounts();
+      nextCard();
+    }
+
+    // --- UI FLOW & CARD DISPLAY ---
+    function updateLearnedCount() {
+      const count = words.filter(w => (w.successCount || 0) >= 3).length;
+      learnedCountEl.textContent = count;
+    }
+    function buildQueues(reviewWords = null) {
+      if (reviewWords) {
+        newQueue = [];
+        reviewQueue = [...reviewWords].sort(() => Math.random() - 0.5);
+      } else {
+        const today = getToday();
+        const unlearnedWords = words.filter(w => !w.isLearning && w.interval === 0);
+        const dueForReview = words.filter(w => w.interval > 0 && (REVIEW_IGNORE_DATE || new Date(w.nextReview) <= today));
+        newQueue = unlearnedWords.slice(0, DAILY_NEW_LIMIT);
+        reviewQueue = dueForReview.sort(() => Math.random() - 0.5);
+      }
+    }
+    function nextCard() {
+      flashcard.classList.remove('is-flipped');
+      difficultyButtons.classList.add('hidden');
+      showAnswerBtn.classList.remove('hidden');
+
+      setTimeout(() => {
+        if (reviewQueue.length > 0) {
+          currentCard = reviewQueue.shift();
+          currentCard.type = 'review';
+        } else if (newQueue.length > 0) {
+          currentCard = newQueue.shift();
+          currentCard.type = 'new';
+          currentCard.isLearning = true;
+        } else {
+          currentCard = null;
+        }
+
+        if (currentCard) {
+          updateCardUI();
+          updateCounts();
+        } else {
+          showSummary();
+        }
+      }, 300);
+    }
+    function updateCardUI() {
+      if (globalFlashcardBg) cardFrontBgEl.src = globalFlashcardBg;
+      cardRankEl.textContent = `#${currentCard.id}`;
+      cardEnglishEl.textContent = currentCard.english;
+      cardPolishEl.textContent = currentCard.polish;
+      cardExampleEnEl.textContent = currentCard.example_en;
+      cardExamplePlEl.textContent = currentCard.example_pl;
+      cardImageEl.src = currentCard.image || "";
+      cardImageEl.style.display = currentCard.image ? 'block' : 'none';
+    }
+    function updateCounts() {
+      let newCurrent = currentCard && currentCard.type === 'new' ? 1 : 0;
+      let reviewCurrent = currentCard && currentCard.type === 'review' ? 1 : 0;
+      newCountEl.textContent = newQueue.length + newCurrent;
+      reviewCountEl.textContent = reviewQueue.length + reviewCurrent;
+      updateLearnedCount();
+    }
+    function showSummary() {
+      learningState.classList.add('hidden');
+      testState.classList.add('hidden');
+      testSummaryState.classList.add('hidden');
+      summaryState.classList.remove('hidden');
+
+      const cardsRemaining = newQueue.length > 0 || reviewQueue.length > 0;
+      const summaryText = document.querySelector('#summary-state p');
+      const keepGoingBtn = document.getElementById('start-new-session-early');
+
+      if (cardsRemaining) {
+        summaryText.textContent = "Masz świetną passę. Tak trzymaj!";
+        keepGoingBtn.textContent = "Keep going!";
+        keepGoingBtn.disabled = false;
+        sessionCompleted = false;
+      } else {
+        summaryText.textContent = "Gratulacje! Ukończyłeś całą talię:)";
+        keepGoingBtn.textContent = "Start again.";
+        keepGoingBtn.disabled = false;
+        sessionCompleted = true;
+      }
+    }
+    function startSession(reviewWords = null) {
+      sessionWordCounter = 0;
+      sessionCompleted = false;
+      learningState.classList.remove('hidden');
+      testState.classList.add('hidden');
+      testSummaryState.classList.add('hidden');
+      summaryState.classList.add('hidden');
+
+      if (!activeDeckId) {
+        learningState.classList.add('hidden');
+        loadingState.innerHTML = '<p class="text-center text-slate-500 p-8">Select or create a deck to start learning.</p>';
+        loadingState.classList.remove('hidden');
+        return;
+      }
+
+      loadingState.classList.add('hidden');
+      buildQueues(reviewWords);
+      if (reviewQueue.length === 0 && newQueue.length === 0) {
+        showSummary();
+      } else {
+        nextCard();
+        updateCounts();
+      }
+    }
+
+    // --- MODAL LOGIC & EVENT LISTENERS ---
+    function openModal(modal) {
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.querySelector('.modal-content').classList.remove('scale-95');
+    }
+    function closeModal(modal) {
+      modal.classList.add('pointer-events-none', 'opacity-0');
+      modal.querySelector('.modal-content').classList.add('scale-95');
+    }
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          if (modal === storyViewerModal && currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+          }
+          closeModal(modal);
+        }
+      });
+      const closeButton = modal.querySelector('.close-modal-btn');
+      if (closeButton) {
+        closeButton.addEventListener('click', () => {
+          if (modal === storyViewerModal && currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+          }
+          closeModal(modal);
+        });
+      }
+    });
+
+    showDecksBtn.addEventListener('click', async () => {
+      try {
+        await renderDecksList();
+        openModal(decksModal);
+      } catch (e) {
+        console.error('[Decks] render error:', e);
+        alert('Nie udało się załadować listy talii. Sprawdź konsolę (F12).');
+      }
+    });
+
+    showLearnedWordsBtn.addEventListener('click', async () => {
+      await waitForDB();
+      learnedWordsList.innerHTML = '';
+      const allWords = await idbRequest(getTransaction('words').getAll());
+      const learned = allWords
+        .filter(w => (w.successCount || 0) >= 3)
+        .sort((a,b) => new Date(a.learnedDate || 0) - new Date(b.learnedDate || 0));
+      if (learned.length === 0) {
+        learnedWordsList.innerHTML = `<p class="text-slate-500 text-center p-4">You haven't learned any words yet. Keep learning!</p>`;
+      } else {
+        learned.forEach(word => {
+          learnedWordsList.innerHTML += `<div class="py-2 border-b"><span class="font-bold w-24 inline-block">${word.english}</span><span>${word.polish}</span></div>`;
+        });
+      }
+      learnedWordsCountEl.textContent = learned.length;
+      openModal(learnedWordsModal);
+    });
+
+    showStatsBtn.addEventListener('click', async () => {
+      await waitForDB();
+      const allWords = await idbRequest(getTransaction('words').getAll());
+      const learnedByDay = allWords
+        .filter(w => (w.successCount || 0) >= 3 && w.learnedDate)
+        .reduce((acc, word) => {
+          const day = formatDate(new Date(word.learnedDate));
+          acc[day] = (acc[day] || 0) + 1;
+          return acc;
+        }, {});
+      const sortedDays = Object.keys(learnedByDay).sort((a, b) => new Date(a) - new Date(b));
+
+      if (statsChart) statsChart.destroy();
+      statsChart = new Chart(statsChartCanvas, {
+        type: 'bar',
+        data: {
+          labels: sortedDays,
+          datasets: [{
+            label: 'Words learned',
+            data: sortedDays.map(day => learnedByDay[day]),
+            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          plugins: { legend: { display: false } }
+        }
+      });
+      openModal(statsModal);
+    });
+
+    showReviewBtn.addEventListener('click', () => openModal(reviewModal));
+
+    openAddWordModalBtn.addEventListener('click', async () => {
+      if (!activeDeckId) {
+        alert("Najpierw wybierz talię.");
+        return;
+      }
+      addWordDeckName.textContent = activeDeckNameEl.textContent || 'Deck';
+      closeModal(decksModal);
+      openModal(addWordModal);
+    });
+
+    addDeckForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await waitForDB();
+      const deckNameInput = document.getElementById('new-deck-name');
+      const deckName = deckNameInput.value.trim();
+      if (!deckName) return;
+
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) {
+          const { data, error } = await supabaseClient
+            .from('decks')
+            .insert({ name: deckName, user_id: user.id })
+            .select('id, name')
+            .single();
+          if (error) throw error;
+          await ensureLocalDeckRecord(data.id, data.name);
+        } else {
+          const store = getTransaction('decks', 'readwrite');
+          await idbRequest(store.add({ name: deckName }));
+        }
+        deckNameInput.value = '';
+        await renderDecksList();
+      } catch (error) {
+        console.error(error);
+        alert('Nie udało się dodać talii.');
+      }
+    });
+
+    // Add words: inserts to cloud if deck exists there, else local only
+    addWordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await waitForDB();
+      const bulkInput = document.getElementById('bulk-words-input');
+      const text = bulkInput.value.trim();
+      const targetDeckId = deckDetailsCurrentId;
+      if (!text || !targetDeckId) {
+        alert("Error: No target deck selected for adding words.");
+        return;
+      }
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const parsed = [];
+      for (const line of lines) {
+        const parts = line.split(';').map(p => p.trim());
+        if (parts.length !== 2 && parts.length !== 4) {
+          alert(`Invalid format: "${line}". Use "en;pl" or "en;pl;example_en;example_pl".`);
+          return;
+        }
+        const [english, polish, example_en = '', example_pl = ''] = parts;
+        parsed.push({ english, polish, example_en, example_pl });
+      }
+
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        let isCloudDeck = false;
+        if (user) {
+          const { data: deckRow, error } = await supabaseClient
+            .from('decks')
+            .select('id')
+            .eq('id', targetDeckId)
+            .single();
+          isCloudDeck = !!deckRow && !error;
+        }
+
+        if (isCloudDeck) {
+          const { error: insErr } = await supabaseClient
+            .from('words')
+            .insert(parsed.map(p => ({
+              deck_id: targetDeckId,
+              english: p.english,
+              polish: p.polish,
+              example_en: p.example_en,
+              example_pl: p.example_pl
+            })));
+          if (insErr) throw insErr;
+
+          await syncCloudToLocal();
+        } else {
+          const tx = db.transaction('words', 'readwrite');
+          const store = tx.objectStore('words');
+          for (const p of parsed) {
+            await idbRequest(store.add({
+              deckId: targetDeckId, english: p.english, polish: p.polish, example_en: p.example_en, example_pl: p.example_pl,
+              interval: 0, nextReview: getToday().toISOString(), easeFactor: 2.5, isLearning: false, learnedDate: null, image: null, successCount: 0
+            }));
+          }
+          await new Promise(res => tx.oncomplete = res);
+        }
+
+        bulkInput.value = '';
+        closeModal(addWordModal);
+        await loadWordsForActiveDeck();
+        startSession();
+        alert(`${parsed.length} words have been added!`);
+      } catch (err) {
+        console.error(err);
+        alert('Could not add words. See console for details.');
+      }
+    });
+
+    showAnswerBtn.addEventListener('click', () => {
+      flashcard.classList.add('is-flipped');
+      showAnswerBtn.classList.add('hidden');
+      difficultyButtons.classList.remove('hidden');
+      if (currentCard) setTimeout(() => speak(currentCard.example_en, ENGLISH_ACCENT, 1.0), 400);
+    });
+    difficultyButtons.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button && button.dataset.difficulty) {
+        processAnswer(parseInt(button.dataset.difficulty, 10));
+      }
+    });
+    speakBtnFront.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentCard) speak(currentCard.english, ENGLISH_ACCENT, 1.0);
+    });
+    speakBtnBack.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentCard) speak(currentCard.example_en, ENGLISH_ACCENT, 1.0);
+    });
+
+    startNewSessionEarlyBtn.addEventListener('click', () => {
+      if (sessionCompleted) {
+        summaryState.classList.add('hidden');
+        startSession([...words]);
+      } else {
+        summaryState.classList.add('hidden');
+        learningState.classList.remove('hidden');
+        nextCard();
+      }
+    });
+
+    resetProgressBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to reset all your progress? This is irreversible.')) {
+        db.close();
+        await idbRequest(indexedDB.deleteDatabase(dbName));
+        words = [];
+        headerImageEl.src = 'images/default-header.jpg';
+        globalFlashcardBg = null;
+        await init(true);
+      }
+    });
+
+    document.querySelectorAll('.review-btn-learn, .review-btn-test').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await waitForDB();
+        const type = btn.dataset.type;
+        const count = btn.dataset.count ? parseInt(btn.dataset.count, 10) : null;
+        const allLearnedWords = (await idbRequest(getTransaction('words').getAll())).filter(w => (w.successCount || 0) >= 3);
+
+        let wordsToReview = [];
+        if (type === 'last' && count) {
+          wordsToReview = allLearnedWords
+            .sort((a,b) => new Date(b.learnedDate || 0) - new Date(a.learnedDate || 0))
+            .slice(0, count);
+        } else if (type === 'today') {
+          const todayStr = formatDate(getToday());
+          wordsToReview = allLearnedWords
+            .filter(w => w.learnedDate && formatDate(new Date(w.learnedDate)) === todayStr);
+        }
+
+        const isTest = btn.classList.contains('review-btn-test');
+        if (wordsToReview.length < (isTest ? 4 : 1)) {
+          alert('You do not have enough learned words to start this session.');
+          return;
+        }
+
+        closeModal(reviewModal);
+        if (isTest) {
+          testDirection = btn.dataset.direction || 'en2pl';
+          testWords = wordsToReview;
+          startTest();
+        } else {
+          startSession(wordsToReview);
+        }
+      });
+    });
+
+    function startTest() {
+      learningState.classList.add('hidden');
+      testState.classList.remove('hidden');
+      testSummaryState.classList.add('hidden');
+      currentTestQuestionIndex = 0;
+      testScore = 0;
+      testWords = testWords.sort(() => Math.random() - 0.5);
+      displayTestQuestion();
+    }
+    function displayTestQuestion() {
+      if (currentTestQuestionIndex >= testWords.length) {
+        showTestSummary();
+        return;
+      }
+      document.getElementById('test-current-question').textContent = currentTestQuestionIndex + 1;
+      document.getElementById('test-total-questions').textContent = testWords.length;
+      document.getElementById('test-next-btn').classList.add('hidden');
+
+      const currentWord = testWords[currentTestQuestionIndex];
+      const answersEl = document.getElementById('test-answers');
+      answersEl.innerHTML = '';
+
+      document.getElementById('test-question').textContent = (testDirection === 'pl2en') ? currentWord.polish : currentWord.english;
+
+      const otherWords = words.filter(w => w.id !== currentWord.id);
+      let options = [currentWord];
+      while (options.length < 4 && otherWords.length > 0) {
+        const randomIndex = Math.floor(Math.random() * otherWords.length);
+        options.push(otherWords.splice(randomIndex, 1)[0]);
+      }
+      options.sort(() => Math.random() - 0.5);
+
+      options.forEach(option => {
+        const button = document.createElement('button');
+        button.className = "p-3 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors";
+        button.textContent = (testDirection === 'pl2en') ? option.english : option.polish;
+        const isCorrect = option.id === currentWord.id;
+        button.onclick = () => checkTestAnswer(isCorrect, button, options.map(o => o.id === currentWord.id));
+        answersEl.appendChild(button);
+      });
+    }
+    function checkTestAnswer(isCorrect, clickedButton, correctIndices) {
+      const buttons = Array.from(document.querySelectorAll('#test-answers button'));
+      buttons.forEach((btn, index) => {
+        btn.disabled = true;
+        if (correctIndices[index]) {
+          btn.classList.add('!bg-green-200', 'border-green-400');
+        }
+      });
+      if (isCorrect) {
+        testScore++;
+        clickedButton.classList.remove('bg-slate-100');
+        clickedButton.classList.add('!bg-green-500', 'text-white');
+      } else {
+        clickedButton.classList.remove('bg-slate-100');
+        clickedButton.classList.add('!bg-red-500', 'text-white');
+      }
+      document.getElementById('test-next-btn').classList.remove('hidden');
+    }
+    document.getElementById('test-next-btn').addEventListener('click', () => {
+      currentTestQuestionIndex++;
+      displayTestQuestion();
+    });
+    function showTestSummary() {
+      testState.classList.add('hidden');
+      testSummaryState.classList.remove('hidden');
+      document.getElementById('test-score').textContent = testScore;
+      document.getElementById('test-summary-total').textContent = testWords.length;
+    }
+    document.getElementById('back-to-main-menu-btn').addEventListener('click', startSession);
+
+    // --- STORY & FILE UPLOAD LOGIC ---
+    let storySentences = [];
+    let currentSentenceIndex = 0;
+    let isStoryPlaying = false;
+    function playNextSentence() {
+      if (!isStoryPlaying || currentSentenceIndex >= storySentences.length) {
+        isStoryPlaying = false;
+        listenFullStoryBtn.querySelector('.play-icon').classList.remove('hidden');
+        listenFullStoryBtn.querySelector('.stop-icon').classList.add('hidden');
+        return;
+      }
+      const sentence = storySentences[currentSentenceIndex].trim();
+      if (sentence) {
+        speak(sentence, ENGLISH_ACCENT, storySpeechRate, () => {
+          currentSentenceIndex++;
+          playNextSentence();
+        });
+      } else {
+        currentSentenceIndex++;
+        playNextSentence();
+      }
+    }
+    showStoriesBtn.addEventListener('click', async () => {
+      await waitForDB();
+      const store = getTransaction('user_stories');
+      const stories = await idbRequest(store.getAll());
+      storiesListEl.innerHTML = '';
+
+      const allStories = [
+        ...(Array.isArray(initialStoryList) ? initialStoryList.map(s => ({...s, isDefault: true})) : []),
+        ...stories
+      ];
+      const uniqueStories = allStories.filter((story, index, self) =>
+        index === self.findIndex((s) => s.title === story.title)
+      );
+
+      if (uniqueStories.length === 0) {
+        storiesListEl.innerHTML = `<p class="text-center text-slate-500 p-8">Your library is empty. Add your first story from a .txt file.</p>`;
+      } else {
+        uniqueStories.forEach(story => renderStoryItem(story));
+      }
+      openModal(storiesModal);
+    });
+    function renderStoryItem(story) {
+      const storyEl = document.createElement('div');
+      storyEl.className = 'flex justify-between items-center p-3 hover:bg-slate-100 rounded-lg cursor-pointer';
+      storyEl.innerHTML = `
+        <p class="truncate pr-4">${story.title}</p>
+        ${!story.isDefault ? `<button data-id="${story.id}" class="delete-story-btn text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">&times;</button>` : ''}
+      `;
+      storyEl.addEventListener('click', (e) => {
+        if (!e.target.closest('.delete-story-btn')) {
+          storyViewerTitle.textContent = story.title;
+          storyViewerContent.textContent = story.content;
+          closeModal(storiesModal);
+          openModal(storyViewerModal);
+        }
+      });
+      const deleteBtn = storyEl.querySelector('.delete-story-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm(`Are you sure you want to delete "${story.title}"?`)) {
+            const store = getTransaction('user_stories', 'readwrite');
+            await idbRequest(store.delete(parseInt(e.target.dataset.id, 10)));
+            showStoriesBtn.click();
+          }
+        });
+      }
+      storiesListEl.appendChild(storyEl);
+    }
+    const addStoryBtnEl = document.getElementById('add-story-btn');
+    addStoryBtnEl.addEventListener('click', () => storyUploadInput.click());
+    storyUploadInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file && file.name.endsWith('.txt')) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const store = getTransaction('user_stories', 'readwrite');
+          await idbRequest(store.add({ title: file.name, content: e.target.result }));
+          showStoriesBtn.click();
+        };
+        reader.readAsText(file);
+      }
+      event.target.value = '';
+    });
+
+    listenFullStoryBtn.addEventListener('click', () => {
+      const playIcon = listenFullStoryBtn.querySelector('.play-icon');
+      const stopIcon = listenFullStoryBtn.querySelector('.stop-icon');
+      if (isStoryPlaying) {
+        isStoryPlaying = false;
+        if (currentAudio) currentAudio.pause();
+        synth.cancel();
+        playIcon.classList.remove('hidden');
+        stopIcon.classList.add('hidden');
+      } else {
+        const text = storyViewerContent.textContent;
+        if (text) {
+          isStoryPlaying = true;
+          storySentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+          currentSentenceIndex = 0;
+          playIcon.classList.add('hidden');
+          stopIcon.classList.remove('hidden');
+          playNextSentence();
+        }
+      }
+    });
+
+    addImageBtn.addEventListener('click', () => {
+      if (currentCard) imageUploadInput.click();
+    });
+    imageUploadInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && currentCard) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentCard.image = event.target.result;
+          const store = getTransaction('words', 'readwrite');
+          store.put(currentCard);
+          updateCardUI();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    uploadHeaderBtn.addEventListener('click', () => headerUploadInput.click());
+    headerUploadInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          headerImageEl.src = event.target.result;
+          setAppData('headerImage', event.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    uploadGlobalBgBtn.addEventListener('click', () => globalBgUploadInput.click());
+    globalBgUploadInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          globalFlashcardBg = event.target.result;
+          cardFrontBgEl.src = globalFlashcardBg;
+          setAppData('globalFlashcardBg', globalFlashcardBg);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    uploadStoryBgBtn.addEventListener('click', () => storyBgUploadInput.click());
+    storyBgUploadInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          storyViewerBgContainer.style.backgroundImage = `url(${event.target.result})`;
+          setAppData('storyBg', event.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    speedSlider.addEventListener('input', (e) => {
+      storySpeechRate = parseFloat(e.target.value);
+    });
+
+    // --- AUTHENTICATION LOGIC (SUPABASE) ---
+    showAuthBtn.addEventListener('click', async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      const session = data?.session;
+      authSuccessMessage.classList.add('hidden');
+      authLoginSuccess?.classList.add('hidden');
+      authErrorMessage.classList.add('hidden');
+
+      if (session) {
+        authForm.classList.add('hidden');
+        userInfo.classList.remove('hidden');
+      } else {
+        authForm.classList.remove('hidden');
+        userInfo.classList.add('hidden');
+      }
+      openModal(authModal);
+    });
+    authForm.addEventListener('submit', (e) => e.preventDefault());
+
+    loginBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      authErrorMessage.classList.add('hidden');
+      authLoginSuccess?.classList.add('hidden');
+
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const originalText = loginBtn.textContent;
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Logging in...';
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+          let msg = error.message || 'Login failed.';
+          if ((msg || '').toLowerCase().includes('invalid login credentials')) {
+            msg = 'Invalid email or password. If you just registered, confirm your email first (Resend confirmation).';
+          }
+          authErrorMessage.textContent = msg;
+          authErrorMessage.classList.remove('hidden');
+        } else {
+          if (authLoginSuccess) {
+            authLoginSuccess.textContent = 'Logged in successfully.';
+            authLoginSuccess.classList.remove('hidden');
+          }
+          setTimeout(() => {
+            authLoginSuccess?.classList.add('hidden');
+            try { closeModal(authModal); } catch (_) {}
+            authForm.reset();
+          }, 900);
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        authErrorMessage.textContent = 'Network error. Try again.';
+        authErrorMessage.classList.remove('hidden');
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = originalText;
+      }
+    });
+
+    registerBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      authErrorMessage.classList.add('hidden');
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: `${window.location.origin}/#auth-callback` }
+      });
+      if (error) {
+        authErrorMessage.textContent = error.message;
+        authErrorMessage.classList.remove('hidden');
+        return;
+      }
+      authForm.classList.add('hidden');
+      authSuccessMessage.classList.remove('hidden');
+    });
+
+    const resendConfirmBtn = document.getElementById('resend-confirm-btn');
+    const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+
+    resendConfirmBtn?.addEventListener('click', async () => {
+      const email = document.getElementById('auth-email').value.trim();
+      if (!email) { alert('Enter your email above first.'); return; }
+      const { error } = await supabaseClient.auth.resend({ type: 'signup', email });
+      if (error) alert('Could not resend: ' + error.message);
+      else alert('Confirmation email sent again. Check your inbox/spam.');
+    });
+
+    forgotPasswordBtn?.addEventListener('click', async () => {
+      const email = document.getElementById('auth-email').value.trim();
+      if (!email) { alert('Enter your email above first.'); return; }
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/#password-reset`
+      });
+      if (error) alert('Could not send reset email: ' + error.message);
+      else alert('Password reset email sent. Check your inbox.');
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await clearLocalUserData();
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) console.error('Logout error:', error);
+      closeModal(authModal);
+    });
+
+    await handleAuthRedirectFromEmail();
+
+    // --- DECKS (local + cloud unified) ---
+    async function getLocalDecks() {
+      const decks = await idbRequest(getTransaction('decks').getAll());
+      return (decks || []).map(d => ({ id: d.id, name: d.name, source: 'local' }));
+    }
+    async function getUnifiedDecks() {
+      const { data } = await supabaseClient.auth.getUser();
+      const user = data?.user;
+
+      let cloudDecks = [];
+      if (user) {
+        const { data, error } = await supabaseClient
+          .from('decks')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true });
+        if (!error && Array.isArray(data)) {
+          cloudDecks = data.map(d => ({ id: d.id, name: d.name, source: 'cloud' }));
+          for (const d of data) {
+            try { await ensureLocalDeckRecord(d.id, d.name); } catch (_) {}
+          }
+        }
+      }
+
+      const localDecks = await getLocalDecks();
+      const merged = [
+        ...cloudDecks,
+        ...localDecks.filter(ld => !cloudDecks.some(cd => cd.id === ld.id))
+      ];
+      return merged;
+    }
+
+    async function renameDeck(deckId, oldName) {
+      await waitForDB();
+      const newName = prompt('Enter the new name for the deck:', oldName);
+      if (!newName || newName.trim() === '' || newName === oldName) {
+        return;
+      }
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) {
+          const { error } = await supabaseClient.from('decks').update({ name: newName }).eq('id', deckId);
+          if (error) throw error;
+        }
+        const store = getTransaction('decks', 'readwrite');
+        const deck = await idbRequest(store.get(deckId));
+        if (deck) {
+          deck.name = newName;
+          await idbRequest(store.put(deck));
+        }
+        console.log(`Deck ${deckId} renamed to "${newName}"`);
+        await renderDecksList();
+        if (activeDeckId === deckId) {
+          activeDeckNameEl.textContent = newName;
+        }
+      } catch (error) {
+        console.error('Error renaming deck:', error);
+        alert('Could not rename the deck. Error: ' + error.message);
+      }
+    }
+
+    async function deleteDeck(deckId, deckName) {
+      await waitForDB();
+      if (!confirm(`Are you sure you want to permanently delete the deck "${deckName}" and all its words? This cannot be undone.`)) {
+        return;
+      }
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) {
+          const { error } = await supabaseClient.from('decks').delete().eq('id', deckId);
+          if (error) throw error;
+        }
+
+        const tx = db.transaction(['decks', 'words'], 'readwrite');
+        const decksStore = tx.objectStore('decks');
+        const wordsStore = tx.objectStore('words');
+        await idbRequest(decksStore.delete(deckId));
+        const wordsIndex = wordsStore.index('deckId');
+        const wordsToDelete = await idbRequest(wordsIndex.getAll(deckId));
+        for (const w of wordsToDelete) {
+          await idbRequest(wordsStore.delete(w.id));
+        }
+        console.log(`Deck "${deckName}" and its words have been deleted.`);
+
+        if (activeDeckId === deckId) {
+          activeDeckId = null;
+          await setAppData('activeDeckId', null);
+          activeDeckNameEl.textContent = 'None';
+          startSession();
+        }
+        await renderDecksList();
+      } catch (error) {
+        console.error('Error deleting deck:', error);
+        alert('Could not delete the deck. Error: ' + error.message);
+      }
+    }
+
+    async function renderDecksList() {
+      await waitForDB();
+      decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Loading decks...</p>';
+      const decks = await getUnifiedDecks();
+      decksListEl.innerHTML = '';
+      
+      if (!decks || decks.length === 0) {
+        decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">No decks found. Create one below.</p>';
+        return;
+      }
+
+      const wordsIndex = getTransaction('words').index('deckId');
+      for (const deck of decks) {
+        const wordsInDeck = await idbRequest(wordsIndex.getAll(deck.id));
+        const count = wordsInDeck.length;
+        const mastered = wordsInDeck.filter(w => (w.successCount || 0) >= 3).length;
+        const isActive = deck.id === activeDeckId;
+        const deckEl = document.createElement('div');
+        deckEl.className = `p-3 border-b border-slate-100 ${isActive ? 'bg-sky-50' : ''}`;
+
+        deckEl.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3 min-w-0">
+              ${deck.source === 'cloud' 
+                ? '<svg title="Synced with cloud" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-500 flex-shrink-0"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>'
+                : '<svg title="Local only" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 flex-shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>'
+              }
+              <p class="font-bold truncate ${isActive ? 'text-sky-600' : ''}">${deck.name}</p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button title="Rename deck" class="rename-btn p-2 text-slate-500 hover:text-sky-600"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+              <button title="Delete deck" class="delete-btn p-2 text-slate-500 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+            </div>
+          </div>
+          <p class="text-sm text-slate-500 mt-1 ml-9">${count} words • <span class="text-green-600 font-semibold">${mastered}</span> mastered</p>
+          <div class="mt-3 flex gap-2 ml-9">
+            <button class="select-deck-btn flex-1 text-sm bg-sky-500 hover:bg-sky-600 text-white px-3 py-2 rounded-lg">Study</button>
+            <button class="view-words-btn flex-1 text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg">View Words</button>
+          </div>
+        `;
+        
+        deckEl.querySelector('.select-deck-btn').addEventListener('click', async () => {
+          closeModal(decksModal);
+          await setActiveDeck(deck.id, deck.name);
+        });
+        deckEl.querySelector('.view-words-btn').addEventListener('click', () => showDeckDetails(deck));
+        deckEl.querySelector('.rename-btn').addEventListener('click', (e) => { e.stopPropagation(); renameDeck(deck.id, deck.name); });
+        deckEl.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteDeck(deck.id, deck.name); });
+
+        decksListEl.appendChild(deckEl);
+      }
+    }
+
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      const isLoggedIn = !!(session && session.user);
+      authIconUser.classList.toggle('hidden', isLoggedIn);
+      authIconLogout.classList.toggle('hidden', !isLoggedIn);
+      
+      console.log('Auth event:', event, 'user:', session?.user?.email || 'none');
+
+      if (isLoggedIn) {
+        userInfo.classList.remove('hidden');
+        userEmailDisplay.textContent = session.user.email;
+
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          await syncCloudToLocal();
+        }
+
+        if (appInitDone) {
+          await renderDecksList();
+          const currentDeckId = await getAppData('activeDeckId');
+          const localDecks = await getLocalDecks();
+          if (currentDeckId && localDecks.some(d => d.id === currentDeckId)) {
+            await setActiveDeck(currentDeckId);
+          } else if (localDecks.length > 0) {
+            await setActiveDeck(localDecks[0].id);
+          }
+        } else {
+          window.addEventListener('app:init-done', async () => {
+            await renderDecksList();
+          }, { once: true });
+        }
+      } else {
+        userInfo.classList.add('hidden');
+        decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Login to see your decks.</p>';
+      }
+    });
+
+    // --- INITIALIZATION ---
+    async function init(isReset = false) {
+      db = await openDB();
+
+      // Default stories import
+      const storyTx = db.transaction('user_stories', 'readwrite');
+      const storyStore = storyTx.objectStore('user_stories');
+      const storyCount = await idbRequest(storyStore.count());
+      if (storyCount === 0 && typeof initialStoryList !== 'undefined' && initialStoryList.length > 0) {
+        console.log('Importing default stories...');
+        initialStoryList.forEach(story => storyStore.add(story));
+        await new Promise(res => storyTx.oncomplete = res);
+      }
+
+      const decksStore = getTransaction('decks');
+      const decks = await idbRequest(decksStore.getAll());
+      let currentDeckId;
+
+      if (decks.length === 0) {
+        const transaction = db.transaction(['decks', 'words'], 'readwrite');
+        const deckStore = transaction.objectStore('decks');
+        const wordStore = transaction.objectStore('words');
+        const addRequest = deckStore.add({ name: 'English Starter Deck' });
+        currentDeckId = await idbRequest(addRequest);
+
+        const wordPromises = initialWordList.map(word => {
+          const wordData = {
+            ...word,
+            deckId: currentDeckId,
+            interval: 0,
+            nextReview: getToday().toISOString(),
+            easeFactor: 2.5,
+            isLearning: false,
+            learnedDate: null,
+            image: null,
+            successCount: 0
+          };
+          delete wordData.id;
+          return idbRequest(wordStore.add(wordData));
+        });
+        await Promise.all(wordPromises);
+        await new Promise(res => transaction.oncomplete = res);
+      } else {
+        currentDeckId = await getAppData('activeDeckId');
+        const deckExists = decks.some(d => d.id === currentDeckId);
+        if (!currentDeckId || !deckExists) {
+          currentDeckId = decks[0].id;
+        }
+      }
+
+      if (!isReset) {
+        const savedHeader = await getAppData('headerImage');
+        if (savedHeader) headerImageEl.src = savedHeader;
+
+        const savedGlobalBg = await getAppData('globalFlashcardBg');
+        if (savedGlobalBg) {
+          globalFlashcardBg = savedGlobalBg;
+          cardFrontBgEl.src = savedGlobalBg;
+        }
+      }
+
+      loadingState.classList.add('hidden');
+      await setActiveDeck(currentDeckId);
+      appInitDone = true;
+      window.dispatchEvent(new Event('app:init-done'));
+    }
+
+    init();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && appInitDone) {
+        reinitializeAppState();
+      }
+    });
+
+  }); // DOMContentLoaded end
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('Service worker registered.', reg))
+          .catch(err => console.log('Service worker registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
