@@ -16,11 +16,11 @@ exports.handler = async (event, context) => {
     const { text, lang, rate } = JSON.parse(event.body);
 
     // Odczytujemy nasz sekretny klucz ze zmiennych środowiskowych Netlify
-    const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_JSON;
+    const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
 
     // Jeśli klucz nie istnieje, zwracamy błąd
     if (!credentialsBase64) {
-      throw new Error("Zmienna GOOGLE_CREDENTIALS_JSON nie została ustawiona w Netlify.");
+      throw new Error("Zmienna GOOGLE_CREDENTIALS_BASE64 nie została ustawiona w Netlify.");
     }
 
     // Dekodujemy klucz z Base64 do formatu JSON
