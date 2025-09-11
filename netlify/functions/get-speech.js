@@ -1,4 +1,4 @@
-// To jest poprawna i kompletna zawartość pliku /netlify/functions/get-speech.js
+// OSTATECZNA WERSJA PLIKU /netlify/functions/get-speech.js
 
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 
@@ -18,9 +18,19 @@ exports.handler = async (event, context) => {
       throw new Error("Zmienna GOOGLE_CREDENTIALS_BASE64 nie została ustawiona w Netlify.");
     }
 
-    const credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8');
+    // Krok 1: Dekodujemy klucz z Base64 do formatu tekstowego
+    let credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8');
+
+    // --- OTO OSTATECZNA POPRAWKA ---
+    // Ta linijka zamienia prawdziwe znaki nowej linii (entery) na tekst "\\n",
+    // co jest poprawnym formatem dla parsera JSON.
+    credentialsJson = credentialsJson.replace(/\n/g, '\\n');
+    // --------------------------------
+
+    // Krok 2: Parsujemy "wyczyszczony" tekst JSON
     const credentials = JSON.parse(credentialsJson);
 
+    // Inicjujemy klienta Google z naszymi danymi
     const client = new TextToSpeechClient({ credentials });
 
     const request = {
