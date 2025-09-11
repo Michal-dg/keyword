@@ -25,6 +25,7 @@ exports.handler = async (event, context) => {
 
     // Dekodujemy klucz z Base64 do formatu JSON
     const credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8');
+    console.log("--- DEBUG START ---", credentialsJson, "--- DEBUG END ---");
     const credentials = JSON.parse(credentialsJson);
 
     // Inicjujemy klienta Google
