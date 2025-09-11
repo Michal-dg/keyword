@@ -1,58 +1,48 @@
-// OSTATECZNA WERSJA PLIKU /netlify/functions/get-speech.js
+// /netlify/functions/get-speech.js
+const textToSpeech = require('@google-cloud/text-to-speech');
 
-const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
+// Parsowanie danych logowania ze zmiennej środowiskowej
+const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Dozwolona jest tylko metoda POST' }),
-    };
-  }
+// Inicjalizacja klienta z danymi konta usługi (Service Account)
+const client = new textToSpeech.TextToSpeechClient({ credentials });
 
-  try {
-    const { text, lang, rate } = JSON.parse(event.body);
-
-    const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
-    if (!credentialsBase64) {
-      throw new Error("Zmienna GOOGLE_CREDENTIALS_BASE64 nie została ustawiona w Netlify.");
+exports.handler = async function(event) {
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    // Krok 1: Dekodujemy klucz z Base64 do formatu tekstowego
-    let credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8');
+    try {
+        const { text, lang, rate } = JSON.parse(event.body);
 
-    // --- OTO OSTATECZNA POPRAWKA ---
-    // Ta linijka zamienia prawdziwe znaki nowej linii (entery) na tekst "\\n",
-    // co jest poprawnym formatem dla parsera JSON.
-    credentialsJson = credentialsJson.replace(/\n/g, '\\n');
-    // --------------------------------
+        if (!text) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'Missing "text" parameter' }) };
+        }
 
-    // Krok 2: Parsujemy "wyczyszczony" tekst JSON
-    const credentials = JSON.parse(credentialsJson);
+        const request = {
+            input: { text: text },
+            voice: { languageCode: lang || 'en-US', ssmlGender: 'NEUTRAL' },
+            audioConfig: { 
+                audioEncoding: 'MP3',
+                speakingRate: rate || 1.0
+            },
+        };
 
-    // Inicjujemy klienta Google z naszymi danymi
-    const client = new TextToSpeechClient({ credentials });
+        const [response] = await client.synthesizeSpeech(request);
 
-    const request = {
-      input: { text: text },
-      voice: { languageCode: lang, ssmlGender: 'NEUTRAL' },
-      audioConfig: { audioEncoding: 'MP3', speakingRate: rate },
-    };
+        return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                audioContent: response.audioContent.toString('base64')
+            }),
+        };
 
-    const [response] = await client.synthesizeSpeech(request);
-    const audioContent = response.audioContent.toString('base64');
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audioContent: audioContent }),
-    };
-
-  } catch (error) {
-    console.error('Błąd w funkcji Netlify:', error.message);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Wystąpił wewnętrzny błąd serwera.', details: error.message }),
-    };
-  }
+    } catch (error) {
+        console.error('Google Text-to-Speech function error:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Failed to synthesize speech.', details: error.message }),
+        };
+    }
 };
