@@ -1,48 +1,46 @@
-// To jest poprawna zawartość pliku /netlify/functions/get-speech.js
+// OSTATECZNA, POPRAWIONA WERSJA PLIKU /netlify/functions/get-speech.js
 
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 
 exports.handler = async (event, context) => {
-  // Sprawdzamy, czy zapytanie jest metodą POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      body: 'Błąd: Dozwolona jest tylko metoda POST',
+      body: JSON.stringify({ error: 'Dozwolona jest tylko metoda POST' }),
     };
   }
 
   try {
-    // Odczytujemy dane wysłane z front-endu (np. tekst do przeczytania)
     const { text, lang, rate } = JSON.parse(event.body);
 
-    // Odczytujemy nasz sekretny klucz ze zmiennych środowiskowych Netlify
+    // Odczytujemy nasz sekretny klucz ze zmiennych Netlify
     const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
-
-    // Jeśli klucz nie istnieje, zwracamy błąd
     if (!credentialsBase64) {
       throw new Error("Zmienna GOOGLE_CREDENTIALS_BASE64 nie została ustawiona w Netlify.");
     }
 
-    // Dekodujemy klucz z Base64 do formatu JSON
-    const credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8');
-    console.log("--- DEBUG START ---", credentialsJson, "--- DEBUG END ---");
-    const credentials = JSON.parse(credentialsJson);
-
-    // Inicjujemy klienta Google
+    // --- KLUCZOWA ZMIANA ---
+    // Zamiast dekodować i parsować, tworzymy obiekt credentials W INNY SPOSÓB.
+    // Najpierw dekodujemy Base64 do stringa, który powinien być JSON-em.
+    const credentialsJsonString = Buffer.from(credentialsBase64, 'base64').toString('utf-8');
+    
+    // Teraz parsujemy ten string do obiektu JSON.
+    const credentials = JSON.parse(credentialsJsonString);
+    
+    // Inicjujemy klienta Google, przekazując mu gotowy obiekt.
     const client = new TextToSpeechClient({ credentials });
+    
+    // --- KONIEC KLUCZOWEJ ZMIANY ---
 
-    // Tworzymy zapytanie do Google API
     const request = {
       input: { text: text },
       voice: { languageCode: lang, ssmlGender: 'NEUTRAL' },
       audioConfig: { audioEncoding: 'MP3', speakingRate: rate },
     };
 
-    // Wywołujemy API i pobieramy odpowiedź
     const [response] = await client.synthesizeSpeech(request);
     const audioContent = response.audioContent.toString('base64');
 
-    // Zwracamy sukces i dane audio do front-endu
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -50,8 +48,11 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Błąd w funkcji Netlify:', error);
-    // Zwracamy błąd serwera, jeśli coś poszło nie tak
+    // Dodajemy więcej szczegółów do logu błędu
+    console.error('Błąd w funkcji Netlify:', error.message);
+    console.error('Stack trace:', error.stack);
+    if (error.details) console.error('Szczegóły błędu:', error.details);
+    
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Wystąpił wewnętrzny błąd serwera.', details: error.message }),
