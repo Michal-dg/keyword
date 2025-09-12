@@ -627,40 +627,6 @@
     let deckDetailsCurrentId = null;
 
     // --- Active deck helpers ---
-    async function syncWordsFromSupabase(deckId) {
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) return;
-
-  const { data: cloudWords, error } = await supabaseClient
-    .from('words')
-    .select('*')
-    .eq('deck_id', deckId)
-    .eq('user_id', user.id);
-
-  if (error) {
-    console.error('Could not fetch words:', error);
-    return;
-  }
-
-  const store = getTransaction('words', 'readwrite');
-  for (const w of cloudWords) {
-    await idbRequest(store.put({
-      id: w.id,                 // UUID z Supabase
-      deckId: w.deck_id,
-      english: w.english,
-      polish: w.polish,
-      example_en: w.example_en,
-      example_pl: w.example_pl,
-      image: w.image,
-      interval: 0,
-      easeFactor: 2.5,
-      nextReview: getToday().toISOString(),
-      successCount: 0,
-      isLearning: false,
-      learnedDate: null
-    }));
-  }
-}
     async function ensureLocalDeckRecord(id, name) {
       try {
         const store = getTransaction('decks');
@@ -793,134 +759,108 @@
     }
 
     // --- WORD MANAGEMENT & SRS LOGIC ---
-    // --- WORD MANAGEMENT & SRS LOGIC ---
-async function loadWordsForActiveDeck() {
-  if (activeDeckId) {
-    const wordStore = getTransaction('words');
-    const index = wordStore.index('deckId');
-    words = await idbRequest(index.getAll(activeDeckId));
-  } else {
-    words = [];
-  }
+    async function loadWordsForActiveDeck() {
+      if (activeDeckId) {
+        const wordStore = getTransaction('words');
+        const index = wordStore.index('deckId');
+        words = await idbRequest(index.getAll(activeDeckId));
+      } else {
+        words = [];
+      }
 
-  const { data } = await supabaseClient.auth.getUser();
-  const user = data?.user;
-
-  // 🔄 Pobieramy progres danego użytkownika
-  if (user && words.length > 0) {
-    try {
-      const { data: progressRecords, error } = await supabaseClient
-        .from('user_word_progress')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error fetching user progress:', error);
-      } else if (progressRecords) {
-        // łączymy progres po word_id
-        const progressMap = new Map(progressRecords.map(p => [p.word_id, p]));
-
-        words.forEach(word => {
-          if (progressMap.has(word.id)) {
-            const progress = progressMap.get(word.id);
-            word.interval = progress.interval;
-            word.easeFactor = progress.ease_factor;
-            word.nextReview = progress.next_review;
-            word.learnedDate = progress.learned_date || null;
+      const { data } = await supabaseClient.auth.getUser();
+      const user = data?.user;
+      if (user && words.length > 0) {
+        try {
+          const { data: progressRecords, error } = await supabaseClient
+            .from('user_word_progress')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('deck_id', activeDeckId);
+          if (error) {
+            console.error('Error fetching user progress:', error);
+          } else if (progressRecords) {
+            const progressMap = new Map(progressRecords.map(p => [p.word_english, p]));
+            words.forEach(word => {
+              if (progressMap.has(word.english)) {
+                const progress = progressMap.get(word.english);
+                word.interval = progress.interval;
+                word.easeFactor = progress.ease_factor;
+                word.nextReview = progress.next_review;
+                word.learnedDate = progress.learned_date || word.learnedDate || null;
+              }
+            });
+            console.log(`Merged ${progressMap.size} progress records from cloud.`);
           }
-        });
-        console.log(`Merged ${progressRecords.length} progress records from Supabase.`);
+        } catch (e) {
+          console.error('Network or other error fetching progress:', e);
+        }
       }
-    } catch (e) {
-      console.error('Network or other error fetching progress:', e);
-    }
-  }
 
-  // Normalizacja successCount
-  const toUpdate = [];
-  for (const w of words) {
-    if (typeof w.successCount !== 'number') {
-      w.successCount = w.learnedDate ? 3 : 0;
-      toUpdate.push(w);
-    }
-  }
-  if (toUpdate.length > 0) {
-    const tx = db.transaction('words', 'readwrite');
-    const store = tx.objectStore('words');
-    toUpdate.forEach(w => store.put(w));
-    await new Promise(res => tx.oncomplete = res);
-  }
-}
-
-async function processAnswer(difficulty) {
-  if (!currentCard) return;
-
-  // ❌ Zła odpowiedź
-  if (difficulty === 1) {
-    currentCard.interval = 0;
-    reviewQueue.unshift(currentCard);
-    currentCard.successCount = 0;
-  }
-  // ✅ Dobra odpowiedź
-  else if (difficulty === 3) {
-    currentCard.isLearning = false;
-    currentCard.successCount = (currentCard.successCount || 0) + 1;
-
-    // algorytm prosty: interval *= easeFactor
-    if (currentCard.successCount === 1) {
-      currentCard.interval = 1;
-    } else if (currentCard.successCount === 2) {
-      currentCard.interval = 3;
-    } else {
-      currentCard.interval = Math.ceil((currentCard.interval || 1) * (currentCard.easeFactor || 2.5));
-    }
-    currentCard.easeFactor = Math.max(1.3, (currentCard.easeFactor || 2.5) + 0.1);
-
-    if (currentCard.successCount >= 3 && !currentCard.learnedDate) {
-      currentCard.learnedDate = getToday().toISOString();
-      updateLearnedCount();
-    }
-  }
-
-  // nowa data powtórki
-  currentCard.nextReview = addDays(getToday(), Math.round(currentCard.interval || 0)).toISOString();
-
-  // zapis do IndexedDB
-  const wordStore = getTransaction('words', 'readwrite');
-  wordStore.put(currentCard);
-
-  // zapis do Supabase → user_word_progress
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (user) {
-    const progressData = {
-      user_id: user.id,
-      word_id: currentCard.id,
-      interval: currentCard.interval,
-      ease_factor: currentCard.easeFactor,
-      next_review: currentCard.nextReview,
-      learned_date: currentCard.learnedDate || null
-    };
-
-    try {
-      const { error } = await supabaseClient
-        .from('user_word_progress')
-        .upsert(progressData, { onConflict: 'user_id, word_id' });
-
-      if (error) {
-        console.error('Error saving progress to Supabase:', error);
+      // Normalizacja successCount (dla starszych rekordów)
+      const toUpdate = [];
+      for (const w of words) {
+        if (typeof w.successCount !== 'number') {
+          w.successCount = w.learnedDate ? 3 : 0;
+          toUpdate.push(w);
+        }
       }
-    } catch (e) {
-      console.error('Network or other error saving progress:', e);
+      if (toUpdate.length > 0) {
+        const tx = db.transaction('words', 'readwrite');
+        const store = tx.objectStore('words');
+        toUpdate.forEach(w => store.put(w));
+        await new Promise(res => tx.oncomplete = res);
+      }
     }
-  }
 
-  sessionWordCounter++;
-  if (sessionWordCounter > 0 && sessionWordCounter % 100 === 0 && (newQueue.length > 0 || reviewQueue.length > 0)) {
-    showSummary();
-  } else {
-    nextCard();
-  }
-}
+    async function processAnswer(difficulty) {
+      if (!currentCard) return;
+      if (difficulty === 1) {
+        currentCard.interval = 0;
+        reviewQueue.unshift(currentCard);
+      } else if (difficulty === 3) {
+        currentCard.isLearning = false;
+        currentCard.interval = Math.max(1, (currentCard.interval || 0) * (currentCard.easeFactor || 2.5));
+        currentCard.easeFactor = (currentCard.easeFactor || 2.5) + 0.1;
+        currentCard.successCount = (currentCard.successCount || 0) + 1;
+        if (currentCard.successCount === 3 && !currentCard.learnedDate) {
+          currentCard.learnedDate = getToday().toISOString();
+          updateLearnedCount();
+        }
+      }
+      currentCard.nextReview = addDays(getToday(), Math.round(currentCard.interval || 0)).toISOString();
+      const wordStore = getTransaction('words', 'readwrite');
+      wordStore.put(currentCard);
+
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        const progressData = {
+          user_id: user.id,
+          word_id: currentCard.id, // Używamy word_id
+          interval: currentCard.interval,
+          ease_factor: currentCard.easeFactor,
+          next_review: currentCard.nextReview,
+          learned_date: currentCard.learnedDate || null
+        };
+        try {
+          const { error } = await supabaseClient
+            .from('user_word_progress')
+            .upsert(progressData, { onConflict: 'user_id, word_id' }); // Poprawiony onConflict
+          if (error) {
+            console.error('Error saving progress to Supabase:', error);
+          }
+        } catch (e) {
+          console.error('Network or other error saving progress:', e);
+        }
+      }
+
+      sessionWordCounter++;
+      if (sessionWordCounter > 0 && sessionWordCounter % 100 === 0 && (newQueue.length > 0 || reviewQueue.length > 0)) {
+        showSummary();
+      } else {
+        nextCard();
+      }
+    }
 
     // --- UI FLOW & CARD DISPLAY ---
     function updateLearnedCount() {
@@ -1070,23 +1010,7 @@ async function processAnswer(difficulty) {
         alert('Nie udało się załadować listy talii. Sprawdź konsolę (F12).');
       }
     });
-// --- FLASHCARD LOGIC ---
-// pokaż odpowiedź na fiszce
-showAnswerBtn.addEventListener('click', () => {
-  flashcard.classList.add('is-flipped');       // Odwraca kartę
-  showAnswerBtn.classList.add('hidden');       // Ukrywa przycisk "Show Answer"
-  difficultyButtons.classList.remove('hidden');// Pokazuje przyciski 👍 / 👎
-});
-// Obsługa kliknięcia kciuków
-document.querySelectorAll('#difficulty-buttons button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const difficulty = parseInt(btn.dataset.difficulty, 10); // 1 = źle, 3 = dobrze
-    processAnswer(difficulty); // Wywołuje naszą logikę SM2
-    flashcard.classList.remove('is-flipped');  // Resetuj do przodu
-    difficultyButtons.classList.add('hidden'); // Ukryj przyciski
-    showAnswerBtn.classList.remove('hidden');  // Pokaż znowu "Show Answer" na nowej fiszce
-  });
-});
+
     showLearnedWordsBtn.addEventListener('click', async () => {
       await waitForDB();
       learnedWordsList.innerHTML = '';
@@ -1180,87 +1104,86 @@ document.querySelectorAll('#difficulty-buttons button').forEach(btn => {
     });
 
     addWordForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  await waitForDB();
-  const bulkInput = document.getElementById('bulk-words-input');
-  const text = bulkInput.value.trim();
-  const targetDeckId = deckDetailsCurrentId;
-
-  if (!text || !targetDeckId) {
-    alert("Error: No target deck selected for adding words.");
-    return;
-  }
-
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const newWords = [];
-
-  for (const line of lines) {
-    const parts = line.split(';').map(p => p.trim());
-    if (parts.length !== 2 && parts.length !== 4) {
-      alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" albo "ang;pl;przykład_en;przykład_pl".`);
-      return;
-    }
-    const [english, polish, example_en = '', example_pl = ''] = parts;
-    newWords.push({
-      deckId: targetDeckId,
-      english,
-      polish,
-      example_en,
-      example_pl,
-      interval: 0,
-      nextReview: getToday().toISOString(),
-      easeFactor: 2.5,
-      isLearning: false,
-      learnedDate: null,
-      image: null,
-      successCount: 0
+      e.preventDefault();
+      await waitForDB();
+      const bulkInput = document.getElementById('bulk-words-input');
+      const text = bulkInput.value.trim();
+      const targetDeckId = deckDetailsCurrentId;
+      if (!text || !targetDeckId) {
+        alert("Error: No target deck selected for adding words.");
+        return;
+      }
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const newWords = [];
+      for (const line of lines) {
+        const parts = line.split(';').map(p => p.trim());
+        if (parts.length !== 2 && parts.length !== 4) {
+          alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" albo "ang;pl;przykład_en;przykład_pl".`);
+          return;
+        }
+        const [english, polish, example_en = '', example_pl = ''] = parts;
+        newWords.push({
+          deckId: targetDeckId, english, polish, example_en, example_pl,
+          interval: 0, nextReview: getToday().toISOString(), easeFactor: 2.5,
+          isLearning: false, learnedDate: null, image: null, successCount: 0
+        });
+      }
+      if (newWords.length > 0) {
+        const transaction = db.transaction('words', 'readwrite');
+        const store = transaction.objectStore('words');
+        newWords.forEach(word => store.add(word));
+        await new Promise(res => transaction.oncomplete = res);
+        bulkInput.value = '';
+        closeModal(addWordModal);
+        await loadWordsForActiveDeck();
+        startSession();
+        alert(`${newWords.length} words have been added!`);
+      }
     });
-  }
 
-  // --- 🔌 Cloud sync: dodaj do Supabase ---
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (user) {
-    const { data: inserted, error } = await supabaseClient
-      .from('words')
-      .insert(newWords.map(w => ({
-        deck_id: targetDeckId,
-        user_id: user.id,
-        english: w.english,
-        polish: w.polish,
-        example_en: w.example_en,
-        example_pl: w.example_pl,
-        image: w.image
-      })))
-      .select();
+    showAnswerBtn.addEventListener('click', () => {
+      flashcard.classList.add('is-flipped');
+      showAnswerBtn.classList.add('hidden');
+      difficultyButtons.classList.remove('hidden');
+      if (currentCard) setTimeout(() => speak(currentCard.example_en, ENGLISH_ACCENT, 1.0), 400);
+    });
+    difficultyButtons.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button && button.dataset.difficulty) {
+        processAnswer(parseInt(button.dataset.difficulty, 10));
+      }
+    });
+    speakBtnFront.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentCard) speak(currentCard.english, ENGLISH_ACCENT, 1.0);
+    });
+    speakBtnBack.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentCard) speak(currentCard.example_en, ENGLISH_ACCENT, 1.0);
+    });
 
-    if (error) {
-      console.error('Supabase insert error:', error);
-    } else {
-      // 🆔 UUID-y z Supabase, nadpisujemy lokalne
-      inserted.forEach((supWord, i) => {
-        newWords[i].id = supWord.id;
-        newWords[i].deckId = supWord.deck_id;
-      });
-    }
-  }
+    // Start again / Keep going logika (Start again na kopii `words`)
+    startNewSessionEarlyBtn.addEventListener('click', () => {
+      if (sessionCompleted) {
+        summaryState.classList.add('hidden');
+        startSession([...words]); // kluczowe: użycie kopii
+      } else {
+        summaryState.classList.add('hidden');
+        learningState.classList.remove('hidden');
+        nextCard();
+      }
+    });
 
-  // --- 💾 Zapis do IndexedDB (lokalne działanie offline) ---
-  if (newWords.length > 0) {
-    const transaction = db.transaction('words', 'readwrite');
-    const store = transaction.objectStore('words');
-    newWords.forEach(word => store.put(word)); // UWAGA: "put" zamiast "add" = można nadpisywać UUID z Supabase
-    await new Promise(res => transaction.oncomplete = res);
-
-    bulkInput.value = '';
-    closeModal(addWordModal);
-
-    // odśwież dane
-    await loadWordsForActiveDeck();
-    startSession();
-
-    alert(`${newWords.length} words have been added!`);
-  }
-});
+    resetProgressBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to reset all your progress? This is irreversible.')) {
+        await db.close();
+        await idbRequest(indexedDB.deleteDatabase(dbName));
+        words = [];
+        headerImageEl.src = 'images/default-header.jpg';
+        globalFlashcardBg = null;
+        await init(true);
+      }
+    });
 
     // Review/Test przyciski – z kierunkiem testu
     document.querySelectorAll('.review-btn-learn, .review-btn-test').forEach(btn => {
@@ -1865,45 +1788,90 @@ document.querySelectorAll('#difficulty-buttons button').forEach(btn => {
           inlineTextarea.value = '';
           addInlineContainer.classList.add('hidden');
         });
-        inlineSaveBtn.addEventListener('click', async () => {
-          const text = (inlineTextarea.value || '').trim();
-          if (!text) {
-            alert('Wklej najpierw słowa.');
+        // =======================================================================
+// ========= WKLEJ TEN POPRAWIONY KOD W MIEJSCE STAREGO =========
+// =======================================================================
+
+inlineSaveBtn.addEventListener('click', async () => {
+    const text = (inlineTextarea.value || '').trim();
+    if (!text) {
+        alert('Wklej najpierw słowa.');
+        return;
+    }
+    
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        alert('Musisz być zalogowany, aby dodać słówka do chmury.');
+        return;
+    }
+
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const wordsToInsert = [];
+
+    for (const line of lines) {
+        const parts = line.split(';').map(p => p.trim());
+        if (parts.length !== 2 && parts.length !== 4) {
+            alert(`Nieprawidłowy format: "${line}".`);
             return;
-          }
-          const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          const newWords = [];
-          for (const line of lines) {
-            const parts = line.split(';').map(p => p.trim());
-            if (parts.length !== 2 && parts.length !== 4) {
-              alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" albo "ang;pl;przykład_en;przykład_pl".`);
-              return;
-            }
-            const [english, polish, example_en = '', example_pl = ''] = parts;
-            newWords.push({
-              deckId: deck.id, english, polish, example_en, example_pl,
-              interval: 0, nextReview: getToday().toISOString(), easeFactor: 2.5,
-              isLearning: false, learnedDate: null, image: null, successCount: 0
-            });
-          }
-          if (newWords.length > 0) {
-            const transaction = db.transaction('words', 'readwrite');
-            const store = transaction.objectStore('words');
-            newWords.forEach(word => store.add(word));
-            await new Promise(res => transaction.oncomplete = res);
-
-            inlineTextarea.value = '';
-            addInlineContainer.classList.add('hidden');
-
-            if (deck.id === activeDeckId) {
-              await loadWordsForActiveDeck();
-              startSession();
-            }
-            await renderDecksList();
-            alert(`${newWords.length} words have been added to "${deck.name}"!`);
-          }
+        }
+        const [english, polish, example_en = '', example_pl = ''] = parts;
+        wordsToInsert.push({
+            deck_id: deck.id,
+            user_id: user.id,
+            english,
+            polish,
+            example_en,
+            example_pl,
+            image: null
         });
+    }
 
+    if (wordsToInsert.length > 0) {
+        // 1. Wysyłamy nowe słówka do Supabase
+        const { data: insertedWords, error } = await supabaseClient
+            .from('words')
+            .insert(wordsToInsert)
+            .select();
+
+        if (error) {
+            console.error('Błąd podczas zapisywania słówek w Supabase:', error);
+            alert('Nie udało się zapisać słówek w chmurze. Sprawdź konsolę (F12).');
+            return;
+        }
+
+        // 2. Zapisujemy słówka zwrócone z Supabase (już z poprawnymi ID) do lokalnej bazy
+        const transaction = db.transaction('words', 'readwrite');
+        const store = transaction.objectStore('words');
+        const localWords = insertedWords.map(word => ({
+            id: word.id, // Ważne: używamy ID z Supabase!
+            deckId: word.deck_id,
+            english: word.english,
+            polish: word.polish,
+            example_en: word.example_en,
+            example_pl: word.example_pl,
+            image: word.image,
+            interval: 0,
+            nextReview: getToday().toISOString(),
+            easeFactor: 2.5,
+            isLearning: false,
+            learnedDate: null,
+            successCount: 0
+        }));
+
+        localWords.forEach(word => store.put(word)); // Używamy .put(), aby nadpisać w razie potrzeby
+        await new Promise(res => transaction.oncomplete = res);
+
+        inlineTextarea.value = '';
+        addInlineContainer.classList.add('hidden');
+
+        if (deck.id === activeDeckId) {
+            await loadWordsForActiveDeck();
+            startSession();
+        }
+        await renderDecksList();
+        alert(`${insertedWords.length} słówek zostało zapisanych w chmurze!`);
+    }
+});
         decksListEl.appendChild(deckEl);
       }
     }
