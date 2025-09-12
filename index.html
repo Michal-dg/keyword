@@ -1074,34 +1074,48 @@
       openModal(addWordModal);
     });
 
-    addDeckForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await waitForDB();
-      const deckNameInput = document.getElementById('new-deck-name');
-      const deckName = deckNameInput.value.trim();
-      if (!deckName) return;
+    // =======================================================================
+// ========= WKLEJ TEN POPRAWIONY KOD W MIEJSCE STAREGO addDeckForm =========
+// =======================================================================
 
-      try {
+addDeckForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await waitForDB();
+    const deckNameInput = document.getElementById('new-deck-name');
+    const deckName = deckNameInput.value.trim();
+    if (!deckName) return;
+
+    try {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) {
-          const { data, error } = await supabaseClient
-            .from('decks')
-            .insert({ name: deckName, user_id: user.id })
-            .select('id, name')
-            .single();
-          if (error) throw error;
-          await ensureLocalDeckRecord(data.id, data.name);
+            // 1. NAJPIERW zapisujemy talię w Supabase, aby dostać prawdziwe UUID
+            const { data: newDeckData, error } = await supabaseClient
+                .from('decks')
+                .insert({ name: deckName, user_id: user.id })
+                .select('id, name')
+                .single();
+
+            if (error) throw error;
+
+            // 2. POTEM zapisujemy talię z poprawnym ID do lokalnej bazy
+            await ensureLocalDeckRecord(newDeckData.id, newDeckData.name);
+            console.log('Talia zapisana w chmurze i lokalnie:', newDeckData);
+
         } else {
-          const store = getTransaction('decks', 'readwrite');
-          await idbRequest(store.add({ name: deckName }));
+            // Logika dla niezalogowanego użytkownika (zapis tylko lokalnie)
+            const store = getTransaction('decks', 'readwrite');
+            await idbRequest(store.add({ name: deckName }));
+            alert('Jesteś offline. Talia została zapisana tylko lokalnie.');
         }
+
         deckNameInput.value = '';
-        await renderDecksList();
-      } catch (error) {
-        console.error(error);
-        alert('Nie udało się dodać talii.');
-      }
-    });
+        await renderDecksList(); // Odśwież listę talii
+        
+    } catch (error) {
+        console.error('Nie udało się dodać talii:', error);
+        alert('Nie udało się dodać talii. Sprawdź konsolę.');
+    }
+});
 
     addWordForm.addEventListener('submit', async (e) => {
       e.preventDefault();
