@@ -1704,9 +1704,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   addWordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // --- NOWY KOD - ZABEZPIECZENIE ---
+    if (!activeDeckId) {
+        alert("Błąd: Nie wybrano aktywnej talii! Wybierz talię z listy, aby móc dodać do niej słówka.");
+        return; // Zatrzymaj dalsze wykonywanie funkcji
+    }
+    // --- KONIEC NOWEGO KODU ---
+
     const bulkInput = document.getElementById('bulk-words-input');
     const text = bulkInput.value.trim();
-    const targetDeckId = activeDeckId;
+    const targetDeckId = activeDeckId; // Ta linia już tam jest
+// ... reszta kodu ...
 
     if (!text || !targetDeckId) {
       alert("Error: No target deck selected.");
