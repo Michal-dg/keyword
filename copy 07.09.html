@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keyword: Ucz się angielskiego</title>
+    <title>Keyword: Ucz się Angielskiego</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="/icons/icon-192x192.png" type="image/png">
     <style>
         body { font-family: 'Inter', sans-serif; }
         .modal { transition: opacity 0.3s ease; }
+        .card { transform-style: preserve-3d; transition: transform 0.6s; }
+        .card.is-flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center; }
+        .card-face-back { transform: rotateY(180deg); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen">
@@ -33,14 +35,38 @@
         </nav>
 
         <main id="main-content">
+            <div class="text-center mb-4"><p class="text-sm text-slate-500">Aktywna talia: <strong id="active-deck-name" class="text-sky-600">Wybierz talię</strong></p></div>
             <div id="loading-state" class="text-center p-8"><p class="text-slate-500">Ładowanie aplikacji...</p></div>
-            <div id="welcome-state" class="hidden text-center p-8"><p class="text-slate-600">Zaloguj się, aby zobaczyć swoje talie i rozpocząć naukę.</p></div>
+            
+            <div id="summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4">Dobra robota!</h2>
+                <p class="text-slate-600 mb-6">Sesja ukończona. Wróć jutro po więcej powtórek!</p>
+                <button id="start-new-session-btn" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600">Ucz się mimo to</button>
+            </div>
+
             <div id="learning-state" class="hidden">
-                 <div class="text-center mb-4"><p class="text-sm text-slate-500">Aktywna talia: <strong id="active-deck-name" class="text-sky-600">Brak</strong></p></div>
-                 <div id="words-view" class="bg-white p-4 rounded-lg shadow">
-                     <div id="words-list">Wybierz talię, aby zobaczyć słówka.</div>
-                     <button id="show-add-word-modal-btn" class="mt-4 w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600">Dodaj nowe słówka</button>
-                 </div>
+                <div class="flex justify-between items-center mb-4 text-sm">
+                    <div class="bg-sky-100 text-sky-700 font-semibold px-3 py-1 rounded-full">Nowe: <span id="new-count">0</span></div>
+                    <div class="bg-amber-100 text-amber-700 font-semibold px-3 py-1 rounded-full">Do powtórki: <span id="review-count">0</span></div>
+                </div>
+                <div id="flashcard-container" class="relative w-full h-[320px] sm:h-[350px]">
+                    <div id="flashcard" class="card w-full h-full">
+                        <div class="card-face bg-white rounded-2xl shadow-lg">
+                            <p id="card-english" class="text-4xl sm:text-5xl font-bold text-slate-800"></p>
+                            <p id="card-example-en" class="text-slate-500 italic mt-4"></p>
+                        </div>
+                        <div class="card-face card-face-back bg-sky-500 text-white rounded-2xl shadow-lg">
+                            <p id="card-polish" class="text-3xl sm:text-4xl font-bold"></p>
+                        </div>
+                    </div>
+                </div>
+                <div id="interaction-buttons" class="mt-6">
+                    <button id="show-answer-btn" class="w-full bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg hover:bg-slate-300">Pokaż odpowiedź</button>
+                    <div id="difficulty-buttons" class="hidden grid grid-cols-2 gap-4">
+                        <button data-difficulty="1" class="bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">Nie wiem</button>
+                        <button data-difficulty="3" class="bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600">Wiem</button>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -50,8 +76,8 @@
             <header class="flex justify-between items-center p-4 border-b"><h2 class="text-xl font-bold">Logowanie / Rejestracja</h2><button class="close-modal-btn p-2 text-2xl">&times;</button></header>
             <div class="p-6">
                 <form id="auth-form" class="space-y-4">
-                    <input type="email" id="auth-email" placeholder="Email" required autocomplete="email" class="w-full px-3 py-2 border rounded-md">
-                    <input type="password" id="auth-password" placeholder="Hasło" required autocomplete="current-password" class="w-full px-3 py-2 border rounded-md">
+                    <input type="email" id="auth-email" placeholder="Email" required class="w-full px-3 py-2 border rounded-md">
+                    <input type="password" id="auth-password" placeholder="Hasło" required class="w-full px-3 py-2 border rounded-md">
                     <div id="auth-error-message" class="text-red-500 text-sm hidden"></div>
                     <div class="flex gap-4">
                         <button id="login-btn" type="submit" class="flex-1 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600">Zaloguj</button>
@@ -79,277 +105,412 @@
     </div>
     <div id="add-word-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
         <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg">
-            <header class="flex justify-between items-center p-4 border-b"><h2 class="text-xl font-bold">Dodaj słówka</h2><button class="close-modal-btn p-2 text-2xl">&times;</button></header>
+            <header class="flex justify-between items-center p-4 border-b"><h2 class="text-xl font-bold">Dodaj słówka do talii: <span id="add-word-deck-name" class="text-sky-600"></span></h2><button class="close-modal-btn p-2 text-2xl">&times;</button></header>
             <form id="add-word-form" class="p-6">
-                <textarea id="bulk-words-input" required class="w-full px-3 py-2 border rounded-md h-48" placeholder="english;polish&#10;car;samochód"></textarea>
+                <textarea id="bulk-words-input" required class="w-full px-3 py-2 border rounded-md h-48" placeholder="english;polish;english example&#10;car;samochód;This is my car."></textarea>
                 <button type="submit" class="mt-4 w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600">Zapisz słówka</button>
             </form>
         </div>
     </div>
-
+    
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    // === 1. KONFIGURACJA I ZMIENNE ===
+    // =======================================================================
+    // KONFIGURACJA SUPABASE
+    // =======================================================================
     const SUPABASE_URL = 'https://elneujplpdoruvrvzvzd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmV1anBscGRvcnV2cnZ6dnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDQ3NjYsImV4cCI6MjA3MjM4MDc2Nn0.YIJYmt8KeiXH0iFS_Pk6ErIkyKZpPDsi29G83VItjCc';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    let db;
+
+    // =======================================================================
+    // STAN APLIKACJI (ZMIENNE GLOBALNE)
+    // =======================================================================
+    let allWordsInDeck = [];
+    let newQueue = [];
+    let reviewQueue = [];
+    let currentCard = null;
     let activeDeckId = null;
 
-    // === 2. ELEMENTY DOM ===
+    // =======================================================================
+    // ELEMENTY DOM
+    // =======================================================================
     const loadingState = document.getElementById('loading-state');
-    const welcomeState = document.getElementById('welcome-state');
+    const summaryState = document.getElementById('summary-state');
     const learningState = document.getElementById('learning-state');
     const activeDeckNameEl = document.getElementById('active-deck-name');
-    const decksListEl = document.getElementById('decks-list');
-    const wordsListEl = document.getElementById('words-list');
+    const newCountEl = document.getElementById('new-count');
+    const reviewCountEl = document.getElementById('review-count');
+    const cardEnglishEl = document.getElementById('card-english');
+    const cardPolishEl = document.getElementById('card-polish');
+    const cardExampleEnEl = document.getElementById('card-example-en');
+    const showAnswerBtn = document.getElementById('show-answer-btn');
+    const difficultyButtons = document.getElementById('difficulty-buttons');
+    const flashcard = document.getElementById('flashcard');
+    const startNewSessionBtn = document.getElementById('start-new-session-btn');
+    const showAuthBtn = document.getElementById('show-auth-btn');
+    const showDecksBtn = document.getElementById('show-decks-btn');
+    const authIconUser = document.getElementById('auth-icon-user');
+    const authIconLogout = document.getElementById('auth-icon-logout');
     const authModal = document.getElementById('auth-modal');
     const decksModal = document.getElementById('decks-modal');
     const addWordModal = document.getElementById('add-word-modal');
-    const showAuthBtn = document.getElementById('show-auth-btn');
-    const showDecksBtn = document.getElementById('show-decks-btn');
-    const showAddWordModalBtn = document.getElementById('show-add-word-modal-btn');
+    const decksListEl = document.getElementById('decks-list');
+    const addDeckForm = document.getElementById('add-deck-form');
+    const addWordForm = document.getElementById('add-word-form');
+    const addWordDeckName = document.getElementById('add-word-deck-name');
+    const authForm = document.getElementById('auth-form');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
     const logoutBtn = document.getElementById('logout-btn');
-    const addDeckForm = document.getElementById('add-deck-form');
-    const addWordForm = document.getElementById('add-word-form');
-    const authIconUser = document.getElementById('auth-icon-user');
-    const authIconLogout = document.getElementById('auth-icon-logout');
-    const userInfo = document.getElementById('user-info');
-    const authForm = document.getElementById('auth-form');
     const authErrorMessage = document.getElementById('auth-error-message');
+    const userInfo = document.getElementById('user-info');
     const userEmailDisplay = document.getElementById('user-email-display');
 
-    // === 3. FUNKCJE POMOCNICZE ===
+    // =======================================================================
+    // FUNKCJE POMOCNICZE
+    // =======================================================================
+    const getToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+    const addDays = (date, days) => { const r = new Date(date); r.setDate(r.getDate() + days); return r; };
     const openModal = (modal) => modal.classList.remove('pointer-events-none', 'opacity-0');
     const closeModal = (modal) => modal.classList.add('pointer-events-none', 'opacity-0');
-    const idbRequest = (request) => new Promise((resolve, reject) => {
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = (e) => reject(e.target.error);
-    });
-    const getTransaction = (storeName, mode) => db.transaction(storeName, mode).objectStore(storeName);
 
-    // === 4. BAZA DANYCH INDEXEDDB ===
-    async function openDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open('KeywordDB_v2', 1);
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains('decks')) db.createObjectStore('decks', { keyPath: 'id' });
-                if (!db.objectStoreNames.contains('words')) {
-                    const store = db.createObjectStore('words', { keyPath: 'id' });
-                    store.createIndex('deckId', 'deck_id', { unique: false });
-                }
-            };
-            request.onsuccess = (e) => resolve(e.target.result);
-            request.onerror = (e) => reject(e.target.error);
-        });
-    }
+    // =======================================================================
+    // ZARZĄDZANIE DANYMI (SUPABASE)
+    // =======================================================================
 
-    // === 5. GŁÓWNA LOGIKA DANYCH ===
-    async function syncAndRenderDecks() {
-        decksListEl.innerHTML = '<p>Ładowanie talii...</p>';
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) {
-            decksListEl.innerHTML = '<p>Zaloguj się, aby zobaczyć swoje talie.</p>';
-            return;
-        }
-        
-        const { data: cloudDecks, error } = await supabaseClient.from('decks').select('id, name').eq('user_id', user.id).order('name');
-        if (error) {
-            console.error("Błąd pobierania talii:", error);
-            decksListEl.innerHTML = '<p class="text-red-500">Nie udało się załadować talii.</p>';
-            return;
-        }
-
-        if (cloudDecks.length === 0) {
-            decksListEl.innerHTML = '<p>Nie masz jeszcze żadnych talii.</p>';
-        } else {
-            decksListEl.innerHTML = cloudDecks.map(deck => `
-                <div class="deck-item flex justify-between items-center p-2 hover:bg-slate-100 rounded-md cursor-pointer" data-deck-id="${deck.id}" data-deck-name="${deck.name}">
-                    <span>${deck.name}</span>
-                    <button data-delete-id="${deck.id}" class="delete-deck-btn text-red-400 hover:text-red-600 font-bold text-xl">&times;</button>
-                </div>
-            `).join('');
-        }
-    }
-
-    async function syncAndRenderWords(deckId) {
-        activeDeckId = deckId;
-        const deckName = decksListEl.querySelector(`[data-deck-id="${deckId}"]`)?.dataset.deckName || 'Talia';
-        activeDeckNameEl.textContent = deckName;
-        
-        wordsListEl.innerHTML = '<p>Ładowanie słówek...</p>';
-
-        const { data: cloudWords, error } = await supabaseClient.from('words').select('*').eq('deck_id', deckId);
-        if (error) {
-            console.error("Błąd pobierania słówek:", error);
-            wordsListEl.innerHTML = '<p class="text-red-500">Błąd ładowania słówek.</p>';
-            return;
-        }
-
-        const wordsHtml = cloudWords.length === 0 
-            ? '<p>Brak słówek w tej talii. Dodaj pierwsze!</p>'
-            : cloudWords.map(word => `<div class="p-2 border rounded-md flex justify-between items-center"><span><strong>${word.english}</strong> - ${word.polish}</span><button data-delete-id="${word.id}" class="delete-word-btn text-red-400 hover:text-red-600">&times;</button></div>`).join('');
-        
-        wordsListEl.innerHTML = wordsHtml;
-    }
-
-    // === 6. OBSŁUGA ZDARZEŃ ===
-    addDeckForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const deckNameInput = document.getElementById('new-deck-name');
-        const deckName = deckNameInput.value.trim();
-        if (!deckName) return;
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) return alert('Musisz być zalogowany.');
-        const { error } = await supabaseClient.from('decks').insert({ name: deckName, user_id: user.id });
-        if (error) {
-            console.error('Nie udało się dodać talii:', error);
-            alert('Błąd podczas tworzenia talii.');
-        } else {
-            deckNameInput.value = '';
-            await syncAndRenderDecks();
-        }
-    });
-    
-    addWordForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const bulkInput = document.getElementById('bulk-words-input');
-        const text = bulkInput.value.trim();
-        if (!text || !activeDeckId) return alert("Najpierw wybierz talię.");
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) return alert('Musisz być zalogowany.');
-        const wordsToInsert = text.split('\n').map(line => {
-            const [english, polish] = line.split(';').map(s => s.trim());
-            return { english, polish, deck_id: activeDeckId, user_id: user.id };
-        }).filter(w => w.english && w.polish);
-        if (wordsToInsert.length === 0) return;
-        const { error } = await supabaseClient.from('words').insert(wordsToInsert);
-        if (error) {
-            console.error("Błąd zapisu słówek:", error);
-            alert("Nie udało się zapisać słówek.");
-        } else {
-            bulkInput.value = '';
-            closeModal(addWordModal);
-            await syncAndRenderWords(activeDeckId);
-        }
-    });
-
-    decksListEl.addEventListener('click', async (e) => {
-        const deckItem = e.target.closest('.deck-item');
-        const deleteBtn = e.target.closest('.delete-deck-btn');
-        if (deleteBtn) {
-            e.stopPropagation();
-            if (confirm('Czy na pewno chcesz usunąć tę talię? Usunie to również wszystkie jej słówka.')) {
-                await supabaseClient.from('decks').delete().eq('id', deleteBtn.dataset.deleteId);
-                await syncAndRenderDecks();
-                if (activeDeckId === deleteBtn.dataset.deleteId) {
-                    activeDeckId = null;
-                    activeDeckNameEl.textContent = 'Brak';
-                    wordsListEl.innerHTML = 'Wybierz talię, aby zobaczyć słówka.';
-                }
+    async function renderDecksList() {
+        decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Ładowanie...</p>';
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Zaloguj się, aby zarządzać taliami.</p>';
+                return;
             }
-        } else if (deckItem) {
-            closeModal(decksModal);
-            await syncAndRenderWords(deckItem.dataset.deckId);
-        }
-    });
-    
-    learningState.addEventListener('click', async (e) => {
-        if (e.target.id === 'show-add-word-modal-btn') {
-            if (!activeDeckId) return alert("Najpierw wybierz aktywną talię z listy.");
-            openModal(addWordModal);
-        }
-        const deleteBtn = e.target.closest('.delete-word-btn');
-        if (deleteBtn) {
-            if (confirm('Czy na pewno chcesz usunąć to słówko?')) {
-                await supabaseClient.from('words').delete().eq('id', deleteBtn.dataset.deleteId);
-                await syncAndRenderWords(activeDeckId);
-            }
-        }
-    });
-    
-    // --- 7. LOGIKA AUTENTYKACJI ---
-    function updateAuthUI(user) {
-        authIconUser.classList.toggle('hidden', !!user);
-        authIconLogout.classList.toggle('hidden', !user);
-        userInfo.classList.toggle('hidden', !user);
-        authForm.classList.toggle('hidden', !!user);
-        if (user) userEmailDisplay.textContent = user.email;
-    }
 
-    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-        const user = session?.user;
-        updateAuthUI(user);
-        loadingState.classList.add('hidden');
-        if (user) {
-            welcomeState.classList.add('hidden');
-            learningState.classList.remove('hidden');
-            await syncAndRenderDecks();
-        } else {
-            activeDeckId = null;
+            const { data: decks, error } = await supabaseClient.from('decks').select('id, name').eq('user_id', user.id).order('name');
+            if (error) throw error;
+
             decksListEl.innerHTML = '';
-            learningState.classList.add('hidden');
-            welcomeState.classList.remove('hidden');
-        }
-    });
+            if (decks.length === 0) {
+                decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Brak talii. Stwórz swoją pierwszą.</p>';
+                return;
+            }
 
+            for (const deck of decks) {
+                const { count } = await supabaseClient.from('words').select('*', { count: 'exact', head: true }).eq('deck_id', deck.id);
+                const isActive = deck.id === activeDeckId;
+                const deckEl = document.createElement('div');
+                deckEl.className = `p-3 border-b flex justify-between items-center ${isActive ? 'bg-sky-50' : ''}`;
+                deckEl.innerHTML = `
+                    <div>
+                        <p class="font-bold ${isActive ? 'text-sky-600' : ''}">${deck.name}</p>
+                        <p class="text-sm text-slate-500">${count || 0} słówek</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="select-deck-btn text-sm bg-sky-500 hover:bg-sky-600 text-white px-3 py-2 rounded-lg">Ucz się</button>
+                        <button class="add-words-to-deck-btn text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg">+</button>
+                        <button class="delete-deck-btn text-red-400 hover:text-red-600 font-bold text-xl">&times;</button>
+                    </div>
+                `;
+                deckEl.querySelector('.select-deck-btn').addEventListener('click', () => { setActiveDeck(deck.id, deck.name); closeModal(decksModal); });
+                deckEl.querySelector('.add-words-to-deck-btn').addEventListener('click', () => {
+                    addWordDeckName.textContent = deck.name;
+                    addWordModal.dataset.deckId = deck.id;
+                    openModal(addWordModal);
+                });
+                deckEl.querySelector('.delete-deck-btn').addEventListener('click', () => deleteDeck(deck.id, deck.name));
+                decksListEl.appendChild(deckEl);
+            }
+        } catch (error) {
+            console.error('Błąd renderowania talii:', error);
+            decksListEl.innerHTML = `<p class="text-red-500 text-center p-4">Błąd: ${error.message}</p>`;
+        }
+    }
+
+    async function addDeck(deckName) {
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return alert('Musisz być zalogowany.');
+            const { error } = await supabaseClient.from('decks').insert({ name: deckName, user_id: user.id });
+            if (error) throw error;
+            document.getElementById('new-deck-name').value = '';
+            await renderDecksList();
+        } catch (error) {
+            console.error('Błąd tworzenia talii:', error);
+            alert(`Nie udało się stworzyć talii: ${error.message}`);
+        }
+    }
+
+    async function deleteDeck(deckId, deckName) {
+        if (!confirm(`Czy na pewno chcesz usunąć talię "${deckName}" i wszystkie jej słówka?`)) return;
+        try {
+            const { error } = await supabaseClient.from('decks').delete().eq('id', deckId);
+            if (error) throw error;
+            if (activeDeckId === deckId) {
+                localStorage.removeItem('activeDeckId');
+                await init();
+            } else {
+                await renderDecksList();
+            }
+        } catch (error) {
+            console.error('Błąd usuwania talii:', error);
+            alert(`Nie udało się usunąć talii: ${error.message}`);
+        }
+    }
+
+    async function loadWordsForActiveDeck() {
+        if (!activeDeckId) { allWordsInDeck = []; return; }
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) { allWordsInDeck = []; return; }
+
+            const { data: wordsData, error: wordsError } = await supabaseClient.from('words').select('*').eq('deck_id', activeDeckId);
+            if (wordsError) throw wordsError;
+
+            const wordIds = wordsData.map(w => w.id);
+            const { data: progressData, error: progressError } = await supabaseClient.from('user_word_progress').select('*').eq('user_id', user.id).in('word_id', wordIds);
+            if (progressError) throw progressError;
+
+            const progressMap = new Map(progressData.map(p => [p.word_id, p]));
+            allWordsInDeck = wordsData.map(word => ({
+                ...word,
+                interval: progressMap.get(word.id)?.interval || 0,
+                nextReview: progressMap.get(word.id)?.next_review || getToday().toISOString(),
+                easeFactor: progressMap.get(word.id)?.ease_factor || 2.5,
+            }));
+        } catch (error) {
+            console.error('Błąd pobierania słówek:', error);
+            allWordsInDeck = [];
+        }
+    }
+
+    async function addWords(targetDeckId, text) {
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return alert('Musisz być zalogowany.');
+            const wordsToInsert = text.split('\n').map(line => {
+                const [english, polish, example_en = ''] = line.split(';').map(s => s.trim());
+                return { deck_id: targetDeckId, user_id: user.id, english, polish, example_en };
+            }).filter(w => w.english && w.polish);
+            if (wordsToInsert.length === 0) return;
+            const { error } = await supabaseClient.from('words').insert(wordsToInsert);
+            if (error) throw error;
+            document.getElementById('bulk-words-input').value = '';
+            closeModal(addWordModal);
+            if (targetDeckId === activeDeckId) {
+                await setActiveDeck(activeDeckId, activeDeckNameEl.textContent);
+            }
+            await renderDecksList();
+        } catch (error) {
+            console.error("Błąd zapisu słówek:", error);
+            alert("Nie udało się zapisać słówek: " + error.message);
+        }
+    }
+
+    // =======================================================================
+    // LOGIKA NAUKI (SRS)
+    // =======================================================================
+    function startSession() {
+        if (!activeDeckId || allWordsInDeck.length === 0) {
+            learningState.classList.add('hidden');
+            summaryState.classList.add('hidden');
+            loadingState.innerHTML = '<p class="text-center text-slate-500 p-8">Wybierz talię i dodaj do niej słówka, aby zacząć.</p>';
+            loadingState.classList.remove('hidden');
+            return;
+        }
+        loadingState.classList.add('hidden');
+        summaryState.classList.add('hidden');
+        learningState.classList.remove('hidden');
+        buildQueues();
+        nextCard();
+    }
+    
+    function buildQueues() {
+        const today = getToday();
+        newQueue = allWordsInDeck.filter(w => w.interval === 0);
+        reviewQueue = allWordsInDeck.filter(w => w.interval > 0 && new Date(w.nextReview) <= today);
+        reviewQueue.sort(() => Math.random() - 0.5);
+    }
+
+    function nextCard() {
+        flashcard.classList.remove('is-flipped');
+        difficultyButtons.classList.add('hidden');
+        showAnswerBtn.classList.remove('hidden');
+
+        setTimeout(() => {
+            if (reviewQueue.length > 0) {
+                currentCard = reviewQueue.shift();
+                currentCard.type = 'review';
+            } else if (newQueue.length > 0) {
+                currentCard = newQueue.shift();
+                currentCard.type = 'new';
+            } else {
+                currentCard = null;
+            }
+
+            if (currentCard) {
+                updateCardUI();
+            } else {
+                learningState.classList.add('hidden');
+                summaryState.classList.remove('hidden');
+            }
+            updateCounts();
+        }, 300);
+    }
+    
+    function updateCardUI() {
+        cardEnglishEl.textContent = currentCard.english;
+        cardPolishEl.textContent = currentCard.polish;
+        cardExampleEnEl.textContent = currentCard.example_en;
+    }
+
+    function updateCounts() {
+        newCountEl.textContent = newQueue.length + (currentCard?.type === 'new' ? 1 : 0);
+        reviewCountEl.textContent = reviewQueue.length + (currentCard?.type === 'review' ? 1 : 0);
+    }
+    
+    async function processAnswer(difficulty) {
+        if (!currentCard) return;
+        if (difficulty === 1) {
+            currentCard.interval = 0;
+            reviewQueue.push(currentCard);
+        } else {
+            currentCard.interval = Math.max(1, (currentCard.interval || 0) * (currentCard.easeFactor || 2.5));
+            currentCard.easeFactor = (currentCard.easeFactor || 2.5) + 0.1;
+        }
+        currentCard.nextReview = addDays(getToday(), Math.round(currentCard.interval)).toISOString();
+        
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) throw new Error("Użytkownik wylogowany.");
+            const progressData = { user_id: user.id, word_id: currentCard.id, deck_id: currentCard.deck_id, interval: currentCard.interval, ease_factor: currentCard.easeFactor, next_review: currentCard.nextReview };
+            const { error } = await supabaseClient.from('user_word_progress').upsert(progressData, { onConflict: 'user_id,word_id' });
+            if (error) throw error;
+            nextCard();
+        } catch (error) {
+            console.error("Błąd zapisu postępu:", error);
+            alert("Nie udało się zapisać postępu. Spróbuj ponownie.");
+        }
+    }
+
+    // =======================================================================
+    // AUTENTYKACJA
+    // =======================================================================
+    function updateAuthUI(user) {
+        const isLoggedIn = !!user;
+        authIconUser.classList.toggle('hidden', !isLoggedIn);
+        authIconLogout.classList.toggle('hidden', isLoggedIn);
+        if (authForm) authForm.classList.toggle('hidden', isLoggedIn);
+        if (userInfo) userInfo.classList.toggle('hidden', !isLoggedIn);
+        if (user && userEmailDisplay) userEmailDisplay.textContent = user.email;
+    }
+
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+        updateAuthUI(session?.user);
+        init();
+    });
+    
+    // =======================================================================
+    // OBSŁUGA ZDARZEŃ
+    // =======================================================================
+    showAuthBtn.addEventListener('click', () => openModal(authModal));
+    showDecksBtn.addEventListener('click', () => { openModal(decksModal); renderDecksList(); });
+    document.querySelectorAll('.close-modal-btn').forEach(b => b.addEventListener('click', (e) => closeModal(e.target.closest('.modal'))));
     loginBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        const { error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('auth-email').value, password: document.getElementById('auth-password').value });
-        authErrorMessage.classList.toggle('hidden', !error);
-        if (error) authErrorMessage.textContent = error.message;
-        else closeModal(authModal);
-    });
-
-    registerBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const { error } = await supabaseClient.auth.signUp({ email: document.getElementById('auth-email').value, password: document.getElementById('auth-password').value });
-        if (error) {
+        authErrorMessage.classList.add('hidden');
+        try {
+            const { error } = await supabaseClient.auth.signInWithPassword({ email: auth-email.value, password: auth-password.value });
+            if (error) throw error;
+            closeModal(authModal);
+        } catch (error) {
             authErrorMessage.textContent = error.message;
             authErrorMessage.classList.remove('hidden');
-        } else {
-            alert('Rejestracja pomyślna! Sprawdź email, aby potwierdzić konto.');
-            closeModal(authModal);
         }
     });
-
+    registerBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        authErrorMessage.classList.add('hidden');
+        try {
+            const { error } = await supabaseClient.auth.signUp({ email: auth-email.value, password: auth-password.value });
+            if (error) throw error;
+            alert('Rejestracja pomyślna! Sprawdź email, aby potwierdzić konto.');
+            closeModal(authModal);
+        } catch (error) {
+            authErrorMessage.textContent = error.message;
+            authErrorMessage.classList.remove('hidden');
+        }
+    });
     logoutBtn.addEventListener('click', () => supabaseClient.auth.signOut());
-    showAuthBtn.addEventListener('click', () => openModal(authModal));
-    showDecksBtn.addEventListener('click', () => openModal(decksModal));
-    [authModal, decksModal, addWordModal].forEach(m => m.querySelectorAll('.close-modal-btn').forEach(b => b.addEventListener('click', () => closeModal(m))));
+    addDeckForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const deckName = document.getElementById('new-deck-name').value.trim();
+        if (deckName) addDeck(deckName);
+    });
+    addWordForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = document.getElementById('bulk-words-input').value.trim();
+        const targetDeckId = addWordModal.dataset.deckId;
+        if (text && targetDeckId) addWords(targetDeckId, text);
+    });
+    showAnswerBtn.addEventListener('click', () => {
+        flashcard.classList.add('is-flipped');
+        showAnswerBtn.classList.add('hidden');
+        difficultyButtons.classList.remove('hidden');
+    });
+    difficultyButtons.addEventListener('click', (e) => {
+        if (e.target.dataset.difficulty) processAnswer(parseInt(e.target.dataset.difficulty));
+    });
+    startNewSessionBtn.addEventListener('click', startSession);
 
-    // --- 8. INICJALIZACJA APLIKACJI ---
+    // =======================================================================
+    // INICJALIZACJA APLIKACJI
+    // =======================================================================
+    async function setActiveDeck(deckId, deckName) {
+        activeDeckId = deckId;
+        localStorage.setItem('activeDeckId', deckId);
+        activeDeckNameEl.textContent = deckName;
+        loadingState.classList.remove('hidden');
+        learningState.classList.add('hidden');
+        await loadWordsForActiveDeck();
+        startSession();
+    }
+    
     async function init() {
-        db = await openDB();
+        loadingState.classList.remove('hidden');
+        learningState.classList.add('hidden');
+        summaryState.classList.add('hidden');
         const { data: { session } } = await supabaseClient.auth.getSession();
         updateAuthUI(session?.user);
+
         if (session?.user) {
-            await syncAndRenderDecks();
-            learningState.classList.remove('hidden');
+            try {
+                const { data: decks, error } = await supabaseClient.from('decks').select('id, name').eq('user_id', session.user.id);
+                if (error) throw error;
+                if (decks && decks.length > 0) {
+                    let lastDeckId = localStorage.getItem('activeDeckId');
+                    const deckToLoad = decks.find(d => d.id === lastDeckId) || decks[0];
+                    await setActiveDeck(deckToLoad.id, deckToLoad.name);
+                } else {
+                    activeDeckId = null;
+                    allWordsInDeck = [];
+                    activeDeckNameEl.textContent = 'Brak talii';
+                    loadingState.innerHTML = '<p class="text-center text-slate-500 p-8">Nie masz żadnej talii. Stwórz swoją pierwszą.</p>';
+                }
+            } catch (error) {
+                console.error("Błąd inicjalizacji:", error);
+                loadingState.innerHTML = `<p class="text-red-500">Błąd ładowania danych: ${error.message}</p>`;
+            }
         } else {
-            welcomeState.classList.remove('hidden');
+            activeDeckId = null;
+            allWordsInDeck = [];
+            activeDeckNameEl.textContent = 'Brak';
+            loadingState.innerHTML = '<p class="text-center text-slate-500 p-8">Zaloguj się, aby rozpocząć naukę.</p>';
         }
-        loadingState.classList.add('hidden');
     }
 
-    init();
+    await init();
 });
 </script>
-
-<script>
-    // Service Worker - na razie pusty, aby nie powodował błędów.
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(reg => console.log('Service worker registered.', reg))
-                .catch(err => console.log('Service worker registration failed:', err));
-        });
-    }
-</script>
-
 </body>
 </html>
