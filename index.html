@@ -996,6 +996,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (newWords.length > 0) {
+          console.log('--- DEBUG --- Obiekt wysyłany do Supabase:', newWords);
           const { error } = await supabase.from('words').insert(newWords);
           if (error) {
             alert('Error saving words: ' + error.message);
