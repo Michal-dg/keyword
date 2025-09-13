@@ -869,14 +869,16 @@ async function saveWords(wordsToSave, targetDeckId) {
 
       const { data: { user } } = await supabaseClient.auth.getUser(); 
       if (user) { 
-        const progressData = { 
-          user_id: user.id, 
-          word_id: currentCard.id, // Używamy word_id 
-          interval: currentCard.interval, 
-          ease_factor: currentCard.easeFactor, 
-          next_review: currentCard.nextReview, 
-          learned_date: currentCard.learnedDate || null 
-        }; 
+      const progressData = {
+          user_id: user.id,
+          word_id: currentCard.id,
+          deck_id: currentCard.deckId, // Ważne dla spójności
+          interval: currentCard.interval,
+          ease_factor: currentCard.easeFactor,
+          next_review: currentCard.nextReview,
+          learned_date: currentCard.learnedDate || null,
+          success_count: currentCard.successCount // Ważne dla spójności
+        };
         try { 
           const { error } = await supabaseClient 
             .from('user_word_progress') 
@@ -1612,14 +1614,14 @@ async function saveWords(wordsToSave, targetDeckId) {
       authIconUser.classList.toggle('hidden', isLoggedIn); 
       authIconLogout.classList.toggle('hidden', !isLoggedIn); 
 
-      if (isLoggedIn) { 
-        userInfo.classList.remove('hidden'); 
-        userEmailDisplay.textContent = session.user.email; 
-        if (appInitDone) { 
-          await renderDecksList(); 
-        } else { 
-          window.addEventListener('app:init-done', () => { renderDecksList(); }, { once: true }); 
-        } 
+     if (isLoggedIn) {
+    userInfo.classList.remove('hidden');
+    userEmailDisplay.textContent = session.user.email;
+    if (appInitDone) {
+        init(); // Przeładuj wszystko po zalogowaniu
+    } else {
+        window.addEventListener('app:init-done', () => { renderDecksList(); }, { once: true });
+    }
       } else { 
         userInfo.classList.add('hidden'); 
         if (appInitDone) { 
@@ -1869,7 +1871,7 @@ async function handleInlineSave(deck, textarea) {
           addInlineContainer.classList.add('hidden'); 
         }); 
         inlineSaveBtn.addEventListener('click', () => handleInlineSave(deck, inlineTextarea));
-        
+
         decksListEl.appendChild(deckEl); 
       } 
     } 
@@ -1926,11 +1928,40 @@ async function handleInlineSave(deck, textarea) {
 
     init(); 
 
-    document.addEventListener('visibilitychange', () => { 
-      if (document.visibilityState === 'visible' && appInitDone) { 
-        reinitializeAppState(); 
-      } 
-    }); 
+  // --- INITIALIZATION ---
+    async function init(isReset = false) {
+        await handleAuthRedirectFromEmail();
+        db = await openDB();
+
+        if (!isReset) {
+            const savedHeader = await getAppData('headerImage');
+            if (savedHeader) headerImageEl.src = savedHeader;
+            const savedGlobalBg = await getAppData('globalFlashcardBg');
+            if (savedGlobalBg) {
+                globalFlashcardBg = savedGlobalBg;
+                cardFrontBgEl.src = savedGlobalBg;
+            }
+        }
+
+        const decks = await getCloudDecks();
+        let currentDeckId = await getAppData('activeDeckId');
+        const deckExists = decks.some(d => d.id === currentDeckId);
+
+        if (!currentDeckId || !deckExists) {
+            currentDeckId = decks.length > 0 ? decks[0].id : null;
+            await setAppData('activeDeckId', currentDeckId);
+        }
+
+        loadingState.classList.add('hidden');
+        if (currentDeckId) {
+            await setActiveDeck(currentDeckId);
+        } else {
+            startSession(); // Pokaż ekran startowy jeśli nie ma talii
+        }
+
+        appInitDone = true;
+        window.dispatchEvent(new Event('app:init-done'));
+    }
 
   }); // DOMContentLoaded end 
   </script> 
