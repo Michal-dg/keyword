@@ -71,6 +71,218 @@
       <button id="show-review-btn" title="Review Session" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors"> 
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg> 
       </button> 
+      <main id="main-content">
+      <div id="loading-state" class="text-center p-8">
+        <p class="text-slate-500">Loading your learning session...</p>
+      </div>
+
+      <div id="learning-state" class="hidden">
+        <div class="flex justify-between items-center mb-2 text-sm text-slate-500">
+          <div>New: <span id="new-count" class="font-bold text-sky-600">0</span></div>
+          <div>Learned: <span id="learned-count" class="font-bold text-green-600">0</span></div>
+          <div>Review: <span id="review-count" class="font-bold text-amber-600">0</span></div>
+        </div>
+        <div id="flashcard" class="card relative w-full aspect-[1.618] rounded-2xl shadow-lg cursor-pointer bg-white">
+          <div class="card-face card-face-front w-full h-full p-6 flex flex-col items-center justify-center text-center rounded-2xl border border-slate-200 overflow-hidden group">
+              <img id="card-front-bg" src="" alt="" class="absolute inset-0 w-full h-full object-cover opacity-10 z-0">
+              <button id="upload-global-bg-btn" class="absolute top-2 right-2 p-2 bg-black bg-opacity-40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20" title="Change global background">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 15 9 5 19"></polyline></svg>
+              </button>
+              <div class="relative z-10">
+                <p id="card-rank" class="absolute -top-4 -left-4 text-xs bg-slate-100 px-2 py-1 rounded-full text-slate-500">#0</p>
+                <h2 id="card-english" class="text-3xl sm:text-4xl font-bold">Word</h2>
+                <button id="speak-btn-front" class="mt-4 text-slate-400 hover:text-sky-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+                </button>
+              </div>
+          </div>
+          <div class="card-face card-face-back w-full h-full p-6 flex flex-col items-start justify-center text-left rounded-2xl border border-slate-200 bg-slate-50">
+              <div class="w-full">
+                  <h3 id="card-polish" class="text-2xl font-bold mb-3">Tłumaczenie</h3>
+                  <p id="card-example-en" class="text-slate-700 italic">Example sentence in English.</p>
+                  <p id="card-example-pl" class="text-slate-500 text-sm">Przykładowe zdanie po polsku.</p>
+                  <img id="card-image" class="mt-4 max-h-24 w-auto rounded-lg" style="display: none;" src="">
+              </div>
+              <div class="absolute top-2 right-2 flex space-x-2">
+                  <button id="add-image-btn" class="p-2 text-slate-400 hover:text-sky-600" title="Add Image">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 15 9 5 19"></polyline></svg>
+                  </button>
+                  <button id="speak-btn-back" class="p-2 text-slate-400 hover:text-sky-600" title="Listen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+                  </button>
+              </div>
+          </div>
+        </div>
+        <div class="mt-6 flex flex-col space-y-3">
+          <button id="show-answer-btn" class="w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 transition-colors">Show Answer</button>
+          <div id="difficulty-buttons" class="hidden grid grid-cols-2 gap-3">
+            <button data-difficulty="1" class="btn-difficulty bg-red-100 text-red-700 font-semibold py-3 px-4 rounded-lg hover:bg-red-200">Again</button>
+            <button data-difficulty="3" class="btn-difficulty bg-green-100 text-green-700 font-semibold py-3 px-4 rounded-lg hover:bg-green-200">Good</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="summary-state" class="hidden text-center p-8 bg-white rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold text-sky-600 mb-2">Session Complete!</h2>
+        <p class="text-slate-600 mb-6">You've finished all cards for now. Well done!</p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <button id="start-new-session-early" class="w-full sm:w-auto bg-sky-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-600 transition-colors">Continue learning</button>
+            <button id="reset-progress" class="w-full sm:w-auto bg-slate-200 text-slate-700 font-bold py-2 px-6 rounded-lg hover:bg-slate-300 transition-colors">Reset All</button>
+        </div>
+      </div>
+        
+      <div id="test-state" class="hidden p-4 bg-white rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-sky-600">Test Your Knowledge</h2>
+            <p class="text-sm text-slate-500">
+                Question <span id="test-current-question">1</span> of <span id="test-total-questions">10</span>
+            </p>
+        </div>
+        <p id="test-question" class="text-center text-2xl font-semibold my-6">Question word?</p>
+        <div id="test-answers" class="grid grid-cols-2 gap-3 mb-4">
+            </div>
+        <button id="test-next-btn" class="hidden w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 transition-colors">Next</button>
+      </div>
+
+      <div id="test-summary-state" class="hidden text-center p-8 bg-white rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold text-sky-600 mb-2">Test Finished!</h2>
+        <p class="text-slate-600 mb-6">
+            Your score: <span id="test-score" class="font-bold">0</span> out of <span id="test-summary-total">0</span>.
+        </p>
+        <button id="back-to-main-menu-btn" class="w-full sm:w-auto bg-sky-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-600 transition-colors">Back to Main Menu</button>
+      </div>
+    </main>
+
+    <div id="auth-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 pointer-events-none opacity-0 z-50">
+        <div class="modal-content bg-white w-full max-w-sm rounded-lg shadow-xl p-6 scale-95">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Account</h2>
+            <button class="close-modal-btn text-slate-400 hover:text-slate-600">&times;</button>
+          </div>
+          <div id="user-info" class="hidden">
+            <p class="mb-2">Logged in as: <strong id="user-email-display"></strong></p>
+            <button id="logout-btn" class="w-full bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600">Log Out</button>
+          </div>
+          <form id="auth-form">
+            <input type="email" id="auth-email" placeholder="Email" class="w-full p-2 border rounded mb-3">
+            <input type="password" id="auth-password" placeholder="Password" class="w-full p-2 border rounded mb-4">
+            <div id="auth-error-message" class="hidden text-red-500 text-sm mb-3"></div>
+            <div id="auth-login-success" class="hidden text-green-500 text-sm mb-3"></div>
+            <div class="flex gap-2 mb-4">
+                <button id="login-btn" class="flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600">Log In</button>
+                <button id="register-btn" class="flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300">Register</button>
+            </div>
+            <div class="text-center text-sm">
+                <a href="#" id="forgot-password-btn" class="text-sky-600 hover:underline">Forgot Password?</a> | 
+                <a href="#" id="resend-confirm-btn" class="text-sky-600 hover:underline">Resend Confirmation</a>
+            </div>
+          </form>
+          <div id="auth-success-message" class="hidden text-center p-4 bg-green-50 rounded-lg">
+            <p class="font-semibold text-green-700">Success!</p>
+            <p class="text-sm text-slate-600">Please check your email to confirm your account.</p>
+          </div>
+        </div>
+    </div>
+    
+    <div id="decks-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 pointer-events-none opacity-0 z-50">
+        <div class="modal-content bg-white w-full max-w-sm rounded-lg shadow-xl scale-95 max-h-[80vh] flex flex-col">
+          <div class="flex justify-between items-center p-4 border-b">
+            <h2 class="text-xl font-bold">Your Decks</h2>
+            <button class="close-modal-btn text-slate-400 hover:text-slate-600">&times;</button>
+          </div>
+          <div id="decks-list" class="flex-grow overflow-y-auto p-1"></div>
+          <div class="p-4 border-t bg-slate-50">
+            <form id="add-deck-form" class="flex gap-2">
+                <input type="text" id="new-deck-name" placeholder="New deck name..." class="flex-grow w-full p-2 border rounded-md">
+                <button type="submit" class="bg-sky-500 text-white font-semibold px-4 rounded-md hover:bg-sky-600">Add</button>
+            </form>
+          </div>
+        </div>
+    </div>
+
+    <div id="learned-words-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 pointer-events-none opacity-0 z-50">
+        <div class="modal-content bg-white w-full max-w-sm rounded-lg shadow-xl scale-95 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h2 class="text-xl font-bold">Learned Words (<span id="learned-words-count">0</span>)</h2>
+                <button class="close-modal-btn text-slate-400 hover:text-slate-600">&times;</button>
+            </div>
+            <div id="learned-words-list" class="flex-grow overflow-y-auto p-4"></div>
+        </div>
+    </div>
+    
+    <div id="stats-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 pointer-events-none opacity-0 z-50">
+        <div class="modal-content bg-white w-full max-w-sm rounded-lg shadow-xl p-4 scale-95">
+            <h2 class="text-xl font-bold mb-4">Your Progress</h2>
+            <canvas id="stats-chart"></canvas>
+            <button class="close-modal-btn mt-4 w-full bg-slate-200 py-2 rounded-lg">Close</button>
+        </div>
+    </div>
+
+    <div id="stories-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 pointer-events-none opacity-0 z-50">
+      <div class="modal-content bg-white w-full max-w-sm rounded-lg shadow-xl scale-95 max-h-[80vh] flex flex-col">
+          <div class="flex justify-between items-center p-4 border-b">
+              <h2 class="text-xl font-bold">Story Library</h2>
+              <button class="close-modal-btn text-slate-400 hover:text-slate-600">&times;</button>
+          </div>
+          <div id="stories-list" class="flex-grow overflow-y-auto p-2"></div>
+          <div class="p-4 border-t">
+              <button id="add-story-btn" class="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600">Add Story (.txt)</button>
+          </div>
+      </div>
+    </div>
+
+    <div id="story-viewer-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 pointer-events-none opacity-0 z-50">
+      <div id="story-viewer-bg-container" class="modal-content bg-white w-full max-w-md rounded-lg shadow-xl scale-95 max-h-[90vh] flex flex-col relative bg-cover bg-center">
+        <div class="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg"></div>
+        <div class="relative z-10 flex flex-col h-full">
+          <div class="flex justify-between items-center p-4 border-b">
+              <h2 id="story-viewer-title" class="text-lg font-bold truncate pr-4">Story Title</h2>
+              <button class="close-modal-btn text-slate-500 hover:text-slate-800">&times;</button>
+          </div>
+          <div id="story-viewer-content" class="flex-grow overflow-y-auto p-4 text-lg leading-relaxed"></div>
+          <div class="p-4 border-t bg-slate-50/50 rounded-b-lg">
+              <div class="flex items-center gap-4">
+                  <button id="listen-full-story-btn" class="p-3 bg-sky-500 text-white rounded-full hover:bg-sky-600">
+                      <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                  </button>
+                  <div class="flex-grow flex items-center gap-2 text-sm text-slate-600">
+                    <span>Speed:</span>
+                    <input id="speed-slider" type="range" min="0.5" max="1.5" step="0.1" value="1.0" class="w-full">
+                  </div>
+                  <button id="upload-story-bg-btn" title="Change Background" class="p-2 text-slate-500 hover:text-sky-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 15 9 5 19"></polyline></svg>
+                  </button>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="review-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 pointer-events-none opacity-0 z-50">
+        <div class="modal-content bg-white w-full max-w-sm rounded-lg shadow-xl p-6 scale-95">
+            <h2 class="text-xl font-bold mb-4">Review Session</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-semibold mb-2">Review last learned words:</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="review-btn-learn text-sm bg-slate-100 p-2 rounded-lg" data-type="last" data-count="10">Learn 10</button>
+                        <button class="review-btn-test text-sm bg-slate-100 p-2 rounded-lg" data-type="last" data-count="10" data-direction="en2pl">Test 10</button>
+                        <button class="review-btn-learn text-sm bg-slate-100 p-2 rounded-lg" data-type="last" data-count="25">Learn 25</button>
+                        <button class="review-btn-test text-sm bg-slate-100 p-2 rounded-lg" data-type="last" data-count="25" data-direction="en2pl">Test 25</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2">Review words learned today:</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="review-btn-learn text-sm bg-sky-100 p-2 rounded-lg" data-type="today">Learn</button>
+                        <button class="review-btn-test text-sm bg-sky-100 p-2 rounded-lg" data-type="today" data-direction="en2pl">Test (EN→PL)</button>
+                    </div>
+                </div>
+            </div>
+            <button class="close-modal-btn mt-6 w-full bg-slate-200 py-2 rounded-lg">Close</button>
+        </div>
+    </div>
     </nav>
     <script>
 document.addEventListener('DOMContentLoaded', async () => {
