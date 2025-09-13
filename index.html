@@ -749,12 +749,13 @@ async function saveWords(wordsToSave, targetDeckId) {
         }
 
         const supabaseWords = wordsToSave.map(w => ({
-            deck_id: targetDeckId,
+            deck_id: targetDeckId, 
             user_id: user.id,
             english: w.english,
             polish: w.polish,
             example_en: w.example_en,
-            example_pl: w.example_pl
+            example_pl: w.example_pl,
+            image: null // Dodajemy image jako null, aby zgadzało się z kolumną
         }));
 
         const { error } = await supabaseClient.from('words').insert(supabaseWords);
@@ -773,7 +774,7 @@ async function saveWords(wordsToSave, targetDeckId) {
         }
     }
     // --- WORD MANAGEMENT & SRS LOGIC --- 
-  async function loadWordsForActiveDeck() {
+ async function loadWordsForActiveDeck() {
         if (!activeDeckId) {
             words = [];
             return;
@@ -792,27 +793,33 @@ async function saveWords(wordsToSave, targetDeckId) {
 
         if (error) {
             console.error("Error fetching words from Supabase, trying local fallback:", error);
+            // Nadal próbujemy z lokalnego IDB, ale pamiętamy o int8 dla deckId
             const wordStore = getTransaction('words');
             const index = wordStore.index('deckId');
-            words = await idbRequest(index.getAll(activeDeckId));
+            words = await idbRequest(index.getAll(activeDeckId)); // activeDeckId jest int8
             return;
         }
 
         const formattedWords = cloudWords.map(w => ({
-            id: w.id,
-            deckId: w.deck_id,
+            id: w.id, // Teraz w.id to int8
+            deckId: w.deck_id, // Teraz w.deck_id to int8
             english: w.english,
             polish: w.polish,
             example_en: w.example_en,
             example_pl: w.example_pl,
             image: w.image,
-            interval: 0, nextReview: getToday().toISOString(), easeFactor: 2.5, 
-            isLearning: false, learnedDate: null, successCount: 0
+            interval: 0, 
+            nextReview: getToday().toISOString().split('T')[0], // Zmieniamy na format 'YYYY-MM-DD' dla typu DATE
+            easeFactor: 2.5, 
+            isLearning: false, 
+            learnedDate: null, 
+            successCount: 0
         }));
 
         const tx = db.transaction('words', 'readwrite');
         const store = tx.objectStore('words');
         const index = store.index('deckId');
+        // Usuwanie starych słówek z IndexedDB po ich IDB keys, aby zastąpić je danymi z chmury
         const oldKeys = await idbRequest(index.getAllKeys(activeDeckId));
         for (const key of oldKeys) {
             await idbRequest(store.delete(key));
@@ -824,23 +831,24 @@ async function saveWords(wordsToSave, targetDeckId) {
         
         words = formattedWords;
 
+        // Synchronizacja postępów użytkownika
         const { data: progressRecords, error: progressError } = await supabaseClient
             .from('user_word_progress')
             .select('*')
             .eq('user_id', user.id)
-            .eq('deck_id', activeDeckId);
+            .eq('deck_id', activeDeckId); // activeDeckId jest int8
 
         if (progressError) {
             console.error('Error fetching user progress:', progressError);
         } else if (progressRecords) {
-            const progressMap = new Map(progressRecords.map(p => [p.word_id, p]));
+            const progressMap = new Map(progressRecords.map(p => [p.word_id, p])); // p.word_id to int8
             words.forEach(word => {
-                if (progressMap.has(word.id)) {
+                if (progressMap.has(word.id)) { // word.id to int8
                     const progress = progressMap.get(word.id);
                     word.interval = progress.interval;
                     word.easeFactor = progress.ease_factor;
-                    word.nextReview = progress.next_review;
-                    word.learnedDate = progress.learned_date || null;
+                    word.nextReview = new Date(progress.next_review).toISOString().split('T')[0]; // Konwersja z DATE na string YYYY-MM-DD
+                    word.learnedDate = progress.learned_date ? new Date(progress.learned_date).toISOString().split('T')[0] : null; // Konwersja z DATE na string YYYY-MM-DD
                     word.successCount = progress.success_count || 0;
                 }
             });
@@ -871,13 +879,14 @@ async function saveWords(wordsToSave, targetDeckId) {
       if (user) { 
       const progressData = {
           user_id: user.id,
-          word_id: currentCard.id,
-          deck_id: currentCard.deckId, // Ważne dla spójności
+          word_id: currentCard.id, 
+          deck_id: currentCard.deckId, 
           interval: currentCard.interval,
           ease_factor: currentCard.easeFactor,
-          next_review: currentCard.nextReview,
-          learned_date: currentCard.learnedDate || null,
-          success_count: currentCard.successCount // Ważne dla spójności
+          next_review: currentCard.nextReview.split('T')[0], // Formatujemy na 'YYYY-MM-DD'
+          learned_date: currentCard.learnedDate ? currentCard.learnedDate.split('T')[0] : null, // Formatujemy na 'YYYY-MM-DD'
+          success_count: currentCard.successCount,
+          last_updated: new Date().toISOString() // Dodałem dla Twojej kolumny last_updated
         };
         try { 
           const { error } = await supabaseClient 
