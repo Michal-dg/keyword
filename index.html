@@ -1702,59 +1702,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     openModal(addWordModal);
   });
 
-  addWordForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // --- NOWY KOD - ZABEZPIECZENIE ---
-    if (!activeDeckId) {
-        alert("Błąd: Nie wybrano aktywnej talii! Wybierz talię z listy, aby móc dodać do niej słówka.");
-        return; // Zatrzymaj dalsze wykonywanie funkcji
-    }
-    // --- KONIEC NOWEGO KODU ---
-
-    const bulkInput = document.getElementById('bulk-words-input');
-    const text = bulkInput.value.trim();
-    const targetDeckId = activeDeckId; // Ta linia już tam jest
-// ... reszta kodu ...
-
-    if (!text || !targetDeckId) {
-      alert("Error: No target deck selected.");
-      return;
-    }
-
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    const newWords = [];
-
-    for (const line of lines) {
-      const parts = line.split(';').map(p => p.trim());
-      if (parts.length !== 2 && parts.length !== 4) {
-        alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" albo "ang;pl;przykład_en;przykład_pl".`);
-        return;
-      }
-      const [english, polish, example_en = '', example_pl = ''] = parts;
-      newWords.push({
-        deck_id: targetDeckId,
-        english,
-        polish,
-        example_en,
-        example_pl
-      });
-    }
-
-    if (newWords.length > 0) {
-      console.log('--- DEBUG --- Wysyłam do Supabase:', newWords);
-      const { error } = await supabase.from('words').insert(newWords);
-      if (error) {
-        alert('Error saving words: ' + error.message);
-      } else {
-        bulkInput.value = '';
-        closeModal(addWordModal);
-        await loadWordsForActiveDeck();
-        startSession();
-        alert(`${newWords.length} words have been added!`);
-      }
-    }
-  });
+  // 🔍 SPRAWDŹ SESJĘ PRZED INSERT
+const { data: { user }, error: authError } = await supabase.auth.getUser();
+if (authError || !user) {
+    alert("You must be logged in to add words.");
+    console.error("Auth error or no user:", authError);
+    return;
+}
+console.log("✅ User is logged in:", user.email);
 
   // --- INITIALIZATION ---
   async function initApp() {
