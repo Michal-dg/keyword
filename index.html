@@ -1733,6 +1733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (newWords.length > 0) {
+      console.log('--- DEBUG --- Wysyłam do Supabase:', newWords);
       const { error } = await supabase.from('words').insert(newWords);
       if (error) {
         alert('Error saving words: ' + error.message);
