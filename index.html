@@ -378,7 +378,7 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     console.log('Supabase client initialized successfully.');
     console.log('!!! TEST KONTROLNY: Skrypt działa do tego miejsca !!!');
-    
+
     const ENGLISH_ACCENT = 'en-GB';
     const REVIEW_IGNORE_DATE = true;
     const DAILY_NEW_LIMIT = Infinity;
@@ -1878,19 +1878,67 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
                 container.querySelector('textarea').focus();
             }
         }
-        else if (button.classList.contains('inline-cancel-words-btn')) {
-            const container = deckItem.querySelector('.add-inline-container');
-            container.querySelector('textarea').value = '';
-            container.classList.add('hidden');
-        }
         else if (button.classList.contains('inline-save-words-btn')) {
-            const textarea = deckItem.querySelector('.inline-bulk-words-input');
-            const text = (textarea.value || '').trim();
-            if (!text) { alert('Wklej najpierw słowa.'); return; }
+        // --- TEST --- Sprawdzamy, czy kliknięcie jest w ogóle rejestrowane.
+        console.log('--- KROK A: Przycisk "Zapisz" został kliknięty.');
 
-            // ... (reszta logiki zapisu) ...
+        const textarea = deckItem.querySelector('.inline-bulk-words-input');
+        const text = (textarea.value || '').trim();
+        if (!text) {
+            alert('Wklej najpierw słowa.');
+            return;
         }
-    });
+
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const payload = [];
+        for (const line of lines) {
+            const parts = line.split(';').map(p => p.trim());
+            if (parts.length < 2) {
+                alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" lub "ang;pl;przykład_en;przykład_pl".`);
+                return;
+            }
+            const [english, polish, example_en = '', example_pl = ''] = parts;
+            payload.push({ english, polish, example_en: example_en || null, example_pl: example_pl || null });
+        }
+
+        // --- TEST --- Sprawdzamy, czy dane zostały poprawnie przetworzone.
+        console.log('--- KROK B: Słowa zostały przetworzone. Przygotowane do zapisu:', payload);
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert('Zaloguj się, aby dodać słowa do chmury.');
+            openModal(authModal);
+            return;
+        }
+
+        const rowsToInsert = payload.map(w => ({
+            user_id: user.id, deck_id: deckId, ...w
+        }));
+
+        const { error } = await supabaseClient.from('words').insert(rowsToInsert);
+        
+        // --- TEST --- Sprawdzamy, czy operacja zapisu do bazy danych się powiodła.
+        console.log('--- KROK C: Operacja zapisu do Supabase zakończona. Błąd:', error);
+        
+        if (error) {
+            console.error('Insert words error:', error);
+            alert('Nie udało się zapisać słów w chmurze. Sprawdź konsolę (F12) aby zobaczyć szczegóły błędu.');
+            return;
+        }
+
+        textarea.value = '';
+        deckItem.querySelector('.add-inline-container').classList.add('hidden');
+
+        if (deckId === activeDeckId) {
+            await loadWordsForActiveDeck();
+            startSession();
+        } else {
+            await refreshDeckCache(deckId);
+        }
+
+        await renderDecksList();
+        alert(`${rowsToInsert.length} słów dodano do "${deckName}".`);
+    }
 
 
     // --- INITIALIZATION ---
