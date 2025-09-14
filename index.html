@@ -1,347 +1,540 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Keyword Lite</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keyword: Master English</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Keyword">
   <style>
-    body { font-family: sans-serif; }
-    .modal { display: none; }
-    .modal.active { display: flex; }
+    body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; }
+    .card { transform-style: preserve-3d; transition: transform 0.6s; }
+    .card.is-flipped { transform: rotateY(180deg); }
+    .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: translateZ(0); }
+    .card-face-back { transform: rotateY(180deg) translateZ(1px); }
+    .btn-difficulty { transition: all 0.2s ease-in-out; }
+    .btn-difficulty:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .modal { transition: opacity 0.3s ease; }
+    .modal-content { transition: transform 0.3s ease; }
+    #header-image-container:hover #upload-header-btn, .card-face-front:hover #upload-global-bg-btn { opacity: 1; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800">
+<body class="bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen">
+  <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="header-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="story-upload-input" class="hidden" accept=".txt">
+  <input type="file" id="global-bg-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="story-bg-upload-input" class="hidden" accept="image/*">
 
-  <div id="app" class="w-full max-w-2xl mx-auto p-4 sm:p-6">
-    <header class="text-center mb-6">
-      <h1 class="text-4xl font-bold text-sky-600">Keyword Lite</h1>
-      <p id="user-display" class="text-slate-500 mt-1 h-6"></p>
+  <div id="app" class="w-full max-w-md mx-auto p-4 sm:p-6">
+    <header class="text-center mb-4">
+      <div id="header-image-container" class="relative w-full aspect-[3.5/1] bg-slate-200 rounded-lg mb-4 overflow-hidden group">
+        <img id="header-image" src="images/default-header.jpg" alt="Header" class="w-full h-full object-cover">
+        <button id="upload-header-btn" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <span class="ml-2">Change Photo</span>
+        </button>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-sky-600">Keyword</h1>
+      <p class="text-slate-500 mt-1">Master English, word by word!</p>
     </header>
 
-    <nav class="flex justify-center items-center space-x-4 mb-6 border-b pb-4">
-      <button id="show-auth-btn" class="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600">Konto</button>
-      <button id="show-decks-btn" class="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">Talie</button>
+    <nav class="relative flex justify-center items-center space-x-2 sm:space-x-4 mb-6 border-b pb-4">
+      <button id="show-auth-btn" title="User Account" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg id="auth-icon-user" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <svg id="auth-icon-logout" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </button>
+      <button id="show-decks-btn" title="Decks" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"></path><path d="M20 12v4H4v-4"></path><path d="M4 8h16"></path></svg>
+      </button>
+      <button id="show-learned-words-btn" title="Learned Words" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+      </button>
+      <button id="show-stats-btn" title="Progress Chart" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      </button>
+      <button id="show-stories-btn" title="Story Library" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"></path></svg>
+      </button>
+      <button id="show-review-btn" title="Review Session" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
+      </button>
     </nav>
 
     <main id="main-content">
-      <div id="welcome-view" class="text-center p-6 bg-white rounded-lg shadow">
-        <h2 class="text-2xl font-semibold mb-2">Witaj w Keyword Lite!</h2>
-        <p class="text-slate-600">Zaloguj się lub zarejestruj, aby zacząć tworzyć swoje talie i uczyć się słówek.</p>
+      <div class="text-center mb-4">
+        <p class="text-sm text-slate-500">
+          Active Deck: <strong id="active-deck-name" class="text-sky-600"></strong>
+        </p>
       </div>
 
-      <div id="decks-view" class="hidden">
-        <div class="bg-white p-6 rounded-lg shadow">
-          <h2 class="text-2xl font-bold mb-4">Twoje Talie</h2>
-          <div id="decks-list" class="space-y-3 mb-6">
-            </div>
-          <form id="add-deck-form" class="flex gap-2">
-            <input type="text" id="new-deck-name" placeholder="Nazwa nowej talii..." class="flex-grow p-2 border rounded-md" required>
-            <button type="submit" class="px-4 py-2 bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-600">Stwórz</button>
-          </form>
-        </div>
+      <div id="loading-state" class="text-center p-8">
+        <p class="text-slate-500">Loading application and database...</p>
       </div>
 
-      <div id="words-view" class="hidden">
-        <div class="bg-white p-6 rounded-lg shadow">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-2xl font-bold">Słówka w talii: <span id="current-deck-name" class="text-sky-600"></span></h2>
-            <button id="back-to-decks-btn" class="text-sm text-sky-600 hover:underline">← Wróć do talii</button>
+      <div id="summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">Great work!</h2>
+        <p class="text-slate-600 mb-6">Masz świetną passę. Tak trzymaj!</p>
+        <button id="start-new-session-early" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">
+          Keep going!
+        </button>
+      </div>
+
+      <div id="learning-state" class="hidden">
+        <div class="flex justify-between items-center mb-4 text-sm">
+          <div class="bg-sky-100 text-sky-700 font-semibold px-3 py-1 rounded-full">New: <span id="new-count">0</span></div>
+          <div id="learned-counter-container" class="flex items-center space-x-2 bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-full text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span><span id="learned-count">0</span></span>
           </div>
-          <div id="words-list" class="space-y-2 mb-6 border-t pt-4">
-            </div>
-          <form id="add-word-form">
-             <label for="bulk-words-input" class="block text-sm font-medium text-slate-700 mb-2">Dodaj nowe słówka</label>
-             <p class="text-xs text-slate-500 mb-2">Każde w nowej linii. Użyj średnika (;) do oddzielenia: <code class="bg-slate-100 p-1 rounded">english;polish</code></p>
-             <textarea id="bulk-words-input" required class="w-full p-2 border rounded-md h-32" placeholder="house;dom&#10;car;samochód"></textarea>
-             <button type="submit" class="w-full mt-2 px-4 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600">Dodaj Słówka</button>
-          </form>
+          <div class="bg-amber-100 text-amber-700 font-semibold px-3 py-1 rounded-full">To Review: <span id="review-count">0</span></div>
         </div>
+
+        <div id="flashcard-container" class="perspective-1000">
+          <div id="flashcard" class="card w-full h-[320px] sm:h-[350px] relative">
+            <div class="card-face card-face-front group flex flex-col items-center justify-center rounded-2xl shadow-lg p-6 text-center overflow-hidden">
+              <img id="card-front-bg" src="images/default-card-bg.jpg" class="absolute inset-0 w-full h-full object-cover">
+              <div id="card-front-overlay" class="absolute inset-0 bg-black/60 rounded-2xl"></div>
+              <button id="upload-global-bg-btn" title="Change card background" class="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition opacity-0 group-hover:opacity-100">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              </button>
+              <div class="relative z-10 flex flex-col items-center justify-between h-full w-full">
+                <button id="speak-btn-front" class="self-start text-white hover:text-slate-200 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                </button>
+                <div class="flex-grow flex flex-col items-center justify-center">
+                  <p class="text-slate-200 text-sm mb-4">Word <span id="card-rank">#1</span></p>
+                  <p id="card-english" class="text-4xl sm:text-5xl font-bold text-white"></p>
+                </div>
+                <button id="show-answer-btn" class="bg-white/20 text-white font-semibold py-2 px-6 rounded-lg hover:bg-white/40 transition-colors">
+                  Show Answer
+                </button>
+              </div>
+            </div>
+
+            <div class="card-face card-face-back flex flex-col justify-between bg-sky-500 text-white rounded-2xl shadow-lg p-4 text-center">
+              <div class="relative w-full h-32">
+                <img id="card-image" src="" alt="Helpful image" class="w-full h-full object-cover rounded-lg bg-sky-400">
+                <button id="add-image-btn" title="Add/Change image" class="absolute top-2 right-2 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </button>
+              </div>
+              <div class="flex-grow flex flex-col justify-center">
+                <p id="card-polish" class="text-3xl sm:text-4xl font-bold mb-2"></p>
+                <div class="text-sky-100 italic">
+                  <p id="card-example-en" class="mb-1"></p>
+                  <p id="card-example-pl" class="text-sm"></p>
+                </div>
+              </div>
+              <button id="speak-btn-back" class="absolute top-4 left-4 text-sky-100 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="difficulty-buttons" class="hidden grid grid-cols-2 gap-3 mt-6">
+          <button data-difficulty="1" class="btn-difficulty bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600 text-3xl">👎</button>
+          <button data-difficulty="3" class="btn-difficulty bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 text-3xl">👍</button>
+        </div>
+      </div>
+
+      <div id="test-state" class="hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-lg">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Test</h2>
+            <p class="text-slate-500"><span id="test-current-question">1</span> / <span id="test-total-questions">10</span></p>
+          </div>
+          <p id="test-question" class="text-3xl font-bold text-center mb-6 h-16"></p>
+          <div id="test-answers" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+          <button id="test-next-btn" class="hidden w-full mt-6 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600">Next Question</button>
+        </div>
+      </div>
+
+      <div id="test-summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
+        <h2 class="text-2xl font-bold mb-4">Test Results</h2>
+        <p class="text-slate-600 mb-6 text-4xl"><span id="test-score">0</span> / <span id="test-summary-total">0</span></p>
+        <button id="back-to-main-menu-btn" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">
+          Back to Main Menu
+        </button>
       </div>
     </main>
+
+    <footer class="text-center mt-6">
+      <button id="reset-progress" class="text-xs text-slate-400 hover:text-red-500 hover:underline">Reset Progress</button>
+    </footer>
   </div>
 
-  <div id="auth-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+  <!-- Decks modal -->
+  <div id="decks-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Logowanie i Rejestracja</h2>
+        <h2 class="text-xl font-bold">Decks</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div id="decks-list" class="p-4 overflow-y-auto"></div>
+      <div class="p-4 border-t">
+        <form id="add-deck-form" class="flex gap-2">
+          <input type="text" id="new-deck-name" placeholder="New deck name..." class="flex-grow block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" required>
+          <button type="submit" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors text-sm">Create</button>
+        </form>
+      </div>
+
+      <!-- Szczegóły talii -->
+      <div id="deck-details-view" class="p-4 border-t hidden">
+        <h3 class="font-bold mb-2 flex items-center gap-2">
+          Słówka w talii:
+          <span id="deck-details-name" class="text-sky-600"></span>
+          <span id="deck-details-source-badge" class="text-xs px-2 py-1 rounded-full bg-slate-200 text-slate-700"></span>
+        </h3>
+        <div id="deck-details-words" class="max-h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50"></div>
+        <button id="open-add-word-modal-btn" class="w-full mt-4 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors text-sm">Add Words to this Deck</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Learned words modal -->
+  <div id="learned-words-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-height-[90vh] flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Learned Words (<span id="learned-words-count">0</span>)</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div id="learned-words-list" class="p-4 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- Stats modal -->
+  <div id="stats-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Learning Progress</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div class="p-4">
+        <canvas id="stats-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stories modal -->
+  <div id="stories-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Story Library</h2>
+        <button id="add-story-btn" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors text-sm">Add New</button>
+      </header>
+      <div id="stories-list" class="p-4 overflow-y-auto flex-grow"></div>
+      <footer class="p-2 border-t">
+        <button class="close-modal-btn w-full text-slate-500 hover:text-slate-800 p-2">Close</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Story viewer modal -->
+  <div id="story-viewer-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div id="story-viewer-bg-container" class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 bg-cover bg-center">
+      <header class="flex justify-between items-center p-4 border-b bg-white/70 backdrop-blur-none rounded-t-2xl">
+        <h2 id="story-viewer-title" class="text-xl font-bold truncate">...</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div id="story-viewer-content" class="p-6 overflow-y-auto flex-grow leading-relaxed bg-white/70 text-slate-900 backdrop-blur-none"></div>
+      <footer class="p-4 border-t flex justify-between items-center bg-white/70 backdrop-blur-none rounded-b-2xl">
+        <div class="flex items-center space-x-2">
+          <button id="upload-story-bg-btn" class="bg-slate-200 text-slate-700 font-semibold py-2 px-3 rounded-lg hover:bg-slate-300 transition-colors text-sm">Background</button>
+        </div>
+        <div class="flex items-center space-x-2">
+          <label for="speed-slider" class="text-sm text-slate-600">Speed:</label>
+          <input type="range" id="speed-slider" min="0.5" max="1.5" value="1" step="0.1" class="w-24">
+        </div>
+        <button id="listen-full-story-btn" class="bg-sky-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors flex items-center space-x-2">
+          <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+          <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12"></rect></svg>
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Add words modal -->
+  <div id="add-word-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Add words to deck: <span id="add-word-deck-name" class="text-sky-600"></span></h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <form id="add-word-form" class="p-6 space-y-4">
+        <div>
+          <label for="bulk-words-input" class="block text-sm font-medium text-slate-700">Paste word list</label>
+          <p class="text-xs text-slate-500 mb-2">
+            Each word on a new line. Use a semicolon (;) to separate parts:
+            <code class="bg-slate-100 p-1 rounded">english;polish;english sentence;polish sentence</code>
+          </p>
+          <textarea id="bulk-words-input" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 h-48" placeholder="house;dom;This is my house.;To jest mój dom.&#10;to eat;jeść;I want to eat pizza.;Chcę zjeść pizzę."></textarea>
+        </div>
+        <button type="submit" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">Save Words</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Review modal -->
+  <div id="review-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Review Session</h2>
+        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+      </header>
+      <div class="p-6 space-y-4">
+        <div class="p-4 border rounded-lg">
+          <h3 class="font-semibold mb-2">Last 20 learned words</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="last" data-count="20">Normal Study</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="20" data-direction="en2pl">Test EN→PL</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="20" data-direction="pl2en">Test PL→EN</button>
+          </div>
+        </div>
+        <div class="p-4 border rounded-lg">
+          <h3 class="font-semibold mb-2">Last 50 learned words</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="last" data-count="50">Normal Study</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="50" data-direction="en2pl">Test EN→PL</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="50" data-direction="pl2en">Test PL→EN</button>
+          </div>
+        </div>
+        <div class="p-4 border rounded-lg">
+          <h3 class="font-semibold mb-2">Words learned today</h3>
+          <div class="flex flex-wrap gap-2">
+            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="today">Normal Study</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="today" data-direction="en2pl">Test EN→PL</button>
+            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="today" data-direction="pl2en">Test PL→EN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth modal -->
+  <div id="auth-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col transform scale-95">
+      <header class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-xl font-bold">Login or Register</h2>
         <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
       </header>
       <div class="p-6">
         <form id="auth-form" class="space-y-4">
           <div>
             <label for="auth-email" class="block text-sm font-medium text-slate-700">Email</label>
-            <input type="email" id="auth-email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md">
+            <input type="email" id="auth-email" required autocomplete="email" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
           </div>
           <div>
-            <label for="auth-password" class="block text-sm font-medium text-slate-700">Hasło</label>
-            <input type="password" id="auth-password" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md">
+            <label for="auth-password" class="block text-sm font-medium text-slate-700">Password</label>
+            <input type="password" id="auth-password" required autocomplete="current-password" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
           </div>
           <div id="auth-error-message" class="text-red-500 text-sm hidden"></div>
           <div class="flex gap-4">
-            <button id="login-btn" type="button" class="flex-1 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600">Zaloguj</button>
-            <button id="register-btn" type="button" class="flex-1 bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg hover:bg-slate-300">Zarejestruj</button>
+            <button id="login-btn" type="submit" class="flex-1 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">Login</button>
+            <button id="register-btn" type="submit" class="flex-1 bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg hover:bg-slate-300 transition-colors">Register</button>
           </div>
-           <div id="logout-container" class="hidden pt-4 border-t">
-              <button id="logout-btn" type="button" class="w-full bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600">Wyloguj</button>
-           </div>
         </form>
+
+        <div class="flex items-center justify-between mt-3 text-xs">
+          <button id="resend-confirm-btn" class="text-sky-600 hover:underline">Resend confirmation</button>
+          <button id="forgot-password-btn" class="text-slate-500 hover:underline">Forgot password?</button>
+        </div>
+
+        <div id="auth-success-message" class="hidden mt-4 p-4 bg-green-100 text-green-700 rounded-lg text-center">
+          <p>We've sent a confirmation link to your email. Check your inbox to complete the registration.</p>
+        </div>
+        <div id="auth-login-success" class="hidden mt-4 p-2 bg-green-100 text-green-700 rounded text-center text-sm">
+          Logged in successfully.
+        </div>
+        <div id="user-info" class="hidden mt-4 text-center">
+          <p>Logged in as: <strong id="user-email-display"></strong></p>
+          <button id="logout-btn" class="mt-4 w-full bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
+        </div>
       </div>
     </div>
   </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // --- KONFIGURACJA SUPABASE ---
-    const SUPABASE_URL = 'https://elneujplpdoruvrvzvzd.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmV1anBscGRvcnV2cnZ6dnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDQ3NjYsImV4cCI6MjA3MjM4MDc2Nn0.YIJYmt8KeiXH0iFS_Pk6ErIkyKZpPDsi29G83VItjCc';
-    // POPRAWKA: Używamy nowej nazwy 'supabaseClient', aby uniknąć konfliktu nazw.
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ===================================================================================
+// KEYWORD APP - FIREBASE VERSION - KROK 2: LOGOWANIE
+// ===================================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    // --- FIREBASE & APP CONFIGURATION ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDI4cJBA8rw2DDav440fk-0erx3ZoG-41o",
+      authDomain: "englishapp-ff793.firebaseapp.com",
+      projectId: "englishapp-ff793",
+      storageBucket: "englishapp-ff793.appspot.com",
+      messagingSenderId: "851511819588",
+      appId: "1:851511819588:web:c91e67102c7338bba62b11",
+      measurementId: "G-9J5Q0E7ZR3"
+    };
 
-    // --- ELEMENTY DOM ---
-    const userDisplay = document.getElementById('user-display');
-    const showAuthBtn = document.getElementById('show-auth-btn');
-    const showDecksBtn = document.getElementById('show-decks-btn');
-    const backToDecksBtn = document.getElementById('back-to-decks-btn');
+    // Inicjalizacja Firebase i usług
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    let currentUser = null; // Będziemy tu przechowywać info o zalogowanym użytkowniku
 
-    const welcomeView = document.getElementById('welcome-view');
-    const decksView = document.getElementById('decks-view');
-    const wordsView = document.getElementById('words-view');
+    console.log('Firebase initialized successfully.');
 
-    const decksList = document.getElementById('decks-list');
-    const wordsList = document.getElementById('words-list');
-    const currentDeckNameEl = document.getElementById('current-deck-name');
-    
-    const addDeckForm = document.getElementById('add-deck-form');
-    const newDeckNameInput = document.getElementById('new-deck-name');
-    const addWordForm = document.getElementById('add-word-form');
-    const bulkWordsInput = document.getElementById('bulk-words-input');
 
+    const ENGLISH_ACCENT = 'en-GB';
+    const REVIEW_IGNORE_DATE = true;
+    const DAILY_NEW_LIMIT = Infinity;
+
+    // --- DOM ELEMENTS (pozostają bez zmian na razie) ---
+    const loadingState = document.getElementById('loading-state');
+    const summaryState = document.getElementById('summary-state');
+    const learningState = document.getElementById('learning-state');
+    // ... (reszta elementów DOM, nie musimy ich tu wszystkich wymieniać)
+
+    // --- ELEMENTY Związane z Logowaniem ---
     const authModal = document.getElementById('auth-modal');
     const authForm = document.getElementById('auth-form');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
     const logoutBtn = document.getElementById('logout-btn');
-    const logoutContainer = document.getElementById('logout-container');
     const authErrorMessage = document.getElementById('auth-error-message');
+    const authSuccessMessage = document.getElementById('auth-success-message');
+    const userInfo = document.getElementById('user-info');
+    const userEmailDisplay = document.getElementById('user-email-display');
+    const authIconUser = document.getElementById('auth-icon-user');
+    const authIconLogout = document.getElementById('auth-icon-logout');
+    const showAuthBtn = document.getElementById('show-auth-btn');
 
-    // --- STAN APLIKACJI ---
-    let currentUser = null;
-    let currentDeckId = null;
-
-    // --- FUNKCJE POMOCNICZE (UI) ---
-    const showView = (view) => {
-        [welcomeView, decksView, wordsView].forEach(v => v.classList.add('hidden'));
-        view.classList.remove('hidden');
-    };
-
-    const openModal = (modal) => modal.classList.add('active');
-    const closeModal = (modal) => modal.classList.remove('active');
-
-    // --- LOGIKA TALII (DECKS) ---
-    const renderDecks = async () => {
-        if (!currentUser) return;
-        
-        // POPRAWKA: Używamy supabaseClient
-        const { data: decks, error } = await supabaseClient
-            .from('decks')
-            .select('id, name')
-            .eq('user_id', currentUser.id)
-            .order('created_at');
-
-        if (error) {
-            console.error('Błąd pobierania talii:', error);
-            decksList.innerHTML = `<p class="text-red-500">Nie udało się załadować talii.</p>`;
-            return;
-        }
-
-        decksList.innerHTML = '';
-        if (decks.length === 0) {
-            decksList.innerHTML = `<p class="text-slate-500">Nie masz jeszcze żadnych talii. Stwórz pierwszą poniżej!</p>`;
-        } else {
-            decks.forEach(deck => {
-                const deckEl = document.createElement('div');
-                deckEl.className = 'flex justify-between items-center p-3 bg-slate-50 rounded-lg border';
-                deckEl.innerHTML = `
-                    <p class="font-semibold">${deck.name}</p>
-                    <button data-deck-id="${deck.id}" data-deck-name="${deck.name}" class="select-deck-btn px-3 py-1 bg-sky-500 text-white text-sm rounded-md hover:bg-sky-600">Wybierz</button>
-                `;
-                decksList.appendChild(deckEl);
-            });
-        }
-    };
-
-    addDeckForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const deckName = newDeckNameInput.value.trim();
-        if (!deckName || !currentUser) return;
-
-        // POPRAWKA: Używamy supabaseClient
-        const { error } = await supabaseClient
-            .from('decks')
-            .insert({ name: deckName, user_id: currentUser.id });
-
-        if (error) {
-            alert('Nie udało się utworzyć talii: ' + error.message);
-        } else {
-            newDeckNameInput.value = '';
-            await renderDecks();
-        }
-    });
-
-    decksList.addEventListener('click', (e) => {
-        if (e.target.classList.contains('select-deck-btn')) {
-            currentDeckId = e.target.dataset.deckId;
-            const deckName = e.target.dataset.deckName;
-            currentDeckNameEl.textContent = deckName;
-            renderWords(currentDeckId);
-            showView(wordsView);
-        }
-    });
-
-    // --- LOGIKA SŁÓWEK (WORDS) ---
-    const renderWords = async (deckId) => {
-        if (!deckId) return;
-
-        // POPRAWKA: Używamy supabaseClient
-        const { data: words, error } = await supabaseClient
-            .from('words')
-            .select('english, polish')
-            .eq('deck_id', deckId)
-            .order('created_at');
-
-        if (error) {
-            console.error('Błąd pobierania słówek:', error);
-            wordsList.innerHTML = `<p class="text-red-500">Nie udało się załadować słówek.</p>`;
-            return;
-        }
-
-        wordsList.innerHTML = '';
-        if (words.length === 0) {
-            wordsList.innerHTML = `<p class="text-slate-500">Ta talia jest pusta. Dodaj pierwsze słówka poniżej!</p>`;
-        } else {
-            words.forEach(word => {
-                const wordEl = document.createElement('div');
-                wordEl.className = 'p-2 border-b';
-                wordEl.textContent = `${word.english} - ${word.polish}`;
-                wordsList.appendChild(wordEl);
-            });
-        }
-    };
-
-    addWordForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const text = bulkWordsInput.value.trim();
-        if (!text || !currentDeckId || !currentUser) return;
-
-        const lines = text.split('\n').filter(Boolean);
-        const wordsPayload = lines.map(line => {
-            const parts = line.split(';').map(p => p.trim());
-            return {
-                english: parts[0],
-                polish: parts[1],
-                deck_id: currentDeckId,
-                user_id: currentUser.id
-            };
-        }).filter(p => p.english && p.polish);
-
-        if (wordsPayload.length === 0) {
-            alert('Wprowadź słówka w poprawnym formacie.');
-            return;
-        }
-
-        // POPRAWKA: Używamy supabaseClient
-        const { error } = await supabaseClient.from('words').insert(wordsPayload);
-
-        if (error) {
-            alert('Nie udało się dodać słówek: ' + error.message);
-        } else {
-            bulkWordsInput.value = '';
-            await renderWords(currentDeckId);
-        }
+    // Funkcje do otwierania/zamykania modali (bez zmian)
+    function openModal(modal) {
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.querySelector('.modal-content').classList.remove('scale-95');
+    }
+    function closeModal(modal) {
+      modal.classList.add('pointer-events-none', 'opacity-0');
+      modal.querySelector('.modal-content').classList.add('scale-95');
+    }
+    document.querySelectorAll('.modal .close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => closeModal(btn.closest('.modal')));
     });
 
 
-    // --- AUTENTYKACJA ---
-    const updateUIForAuthState = (user) => {
-        currentUser = user;
-        if (user) {
-            userDisplay.textContent = `Zalogowano jako: ${user.email}`;
-            logoutContainer.classList.remove('hidden');
-            loginBtn.parentElement.classList.add('hidden');
-            authForm.querySelectorAll('input').forEach(i => i.style.display = 'none');
-            authForm.querySelectorAll('label').forEach(l => l.style.display = 'none');
-            
-            showView(decksView);
-            renderDecks();
-        } else {
-            userDisplay.textContent = 'Wylogowano';
-            logoutContainer.classList.add('hidden');
-            loginBtn.parentElement.classList.remove('hidden');
-            authForm.querySelectorAll('input').forEach(i => i.style.display = 'block');
-            authForm.querySelectorAll('label').forEach(l => l.style.display = 'block');
-            
-            showView(welcomeView);
-            decksList.innerHTML = '';
-        }
-    };
+    // ==========================================================
+    // NOWA LOGIKA LOGOWANIA (FIREBASE)
+    // ==========================================================
 
-    loginBtn.addEventListener('click', async () => {
+    showAuthBtn.addEventListener('click', () => {
         authErrorMessage.classList.add('hidden');
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-password').value;
-        // POPRAWKA: Używamy supabaseClient
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) {
-            authErrorMessage.textContent = error.message;
-            authErrorMessage.classList.remove('hidden');
-        } else {
-            closeModal(authModal);
-        }
+        authSuccessMessage.classList.add('hidden');
+        openModal(authModal);
     });
 
-    registerBtn.addEventListener('click', async () => {
+    authForm.addEventListener('submit', (e) => e.preventDefault());
+
+    // --- REJESTRACJA UŻYTKOWNIKA ---
+    registerBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         authErrorMessage.classList.add('hidden');
-        const email = document.getElementById('auth-email').value;
+        const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value;
-        // POPRAWKA: Używamy supabaseClient
-        const { error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) {
-            authErrorMessage.textContent = error.message;
-            authErrorMessage.classList.remove('hidden');
-        } else {
-            alert('Rejestracja pomyślna! Sprawdź email, aby potwierdzić konto.');
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                console.log('Zarejestrowano pomyślnie!', userCredential.user);
+                authForm.classList.add('hidden');
+                authSuccessMessage.classList.remove('hidden'); // Pokaż wiadomość o sukcesie
+                // Nie zamykamy modala, żeby użytkownik zobaczył wiadomość
+            })
+            .catch((error) => {
+                authErrorMessage.textContent = error.message;
+                authErrorMessage.classList.remove('hidden');
+            });
+    });
+
+    // --- LOGOWANIE UŻYTKOWNIKA ---
+    loginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        authErrorMessage.classList.add('hidden');
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                console.log('Zalogowano pomyślnie!', userCredential.user);
+                closeModal(authModal);
+                authForm.reset();
+            })
+            .catch((error) => {
+                authErrorMessage.textContent = error.message;
+                authErrorMessage.classList.remove('hidden');
+            });
+    });
+
+    // --- WYLOGOWANIE UŻYTKOWNIKA ---
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut().then(() => {
+            console.log('Wylogowano.');
             closeModal(authModal);
-        }
+        });
     });
 
-    logoutBtn.addEventListener('click', async () => {
-        // POPRAWKA: Używamy supabaseClient
-        await supabaseClient.auth.signOut();
-        closeModal(authModal);
-    });
 
-    // POPRAWKA: Używamy supabaseClient
-    supabaseClient.auth.onAuthStateChange((event, session) => {
-        const user = session?.user || null;
-        updateUIForAuthState(user);
-    });
+    // --- OBSERWATOR STANU ZALOGOWANIA (NAJWAŻNIEJSZA CZĘŚĆ) ---
+    // Ta funkcja automatycznie zarządza interfejsem w zależności od tego,
+    // czy użytkownik jest zalogowany, czy nie.
+    auth.onAuthStateChanged(user => {
+        currentUser = user; // Aktualizujemy globalną zmienną
+        const isLoggedIn = !!user;
 
-    // --- NAWIGACJA I OBSŁUGA MODALI ---
-    showAuthBtn.addEventListener('click', () => openModal(authModal));
-    showDecksBtn.addEventListener('click', () => {
-        if(currentUser) {
-            showView(decksView)
+        // Aktualizuj ikony w głównej nawigacji
+        authIconUser.classList.toggle('hidden', isLoggedIn);
+        authIconLogout.classList.toggle('hidden', !isLoggedIn);
+
+        // Zarządzaj widokiem wewnątrz modala logowania
+        if (isLoggedIn) {
+            authForm.classList.add('hidden');
+            userInfo.classList.remove('hidden');
+            userEmailDisplay.textContent = user.email;
         } else {
-            alert('Najpierw się zaloguj, aby zobaczyć talie.');
-            openModal(authModal);
+            authForm.classList.remove('hidden');
+            userInfo.classList.add('hidden');
+        }
+
+        if (isLoggedIn) {
+            console.log('Użytkownik jest zalogowany:', user.email);
+            // Tutaj w przyszłości będziemy ładować talie użytkownika
+        } else {
+            console.log('Użytkownik wylogowany.');
+            // Tutaj w przyszłości będziemy czyścić dane lokalne
         }
     });
-    backToDecksBtn.addEventListener('click', () => showView(decksView));
-    
-    authModal.querySelector('.close-modal-btn').addEventListener('click', () => closeModal(authModal));
-});
+
+    // --- Na razie wyłączamy inicjalizację IndexedDB, żeby nie powodowała błędów ---
+    // init();
+
+    loadingState.innerHTML = '<p class="text-slate-500">Aplikacja gotowa. Zaloguj się lub zarejestruj, używając ikony użytkownika.</p>';
+
+
+}); // DOMContentLoaded end
 </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('Service worker registered.', reg))
+          .catch(err => console.log('Service worker registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
