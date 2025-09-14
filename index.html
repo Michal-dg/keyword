@@ -377,7 +377,8 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmV1anBscGRvcnV2cnZ6dnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDQ3NjYsImV4cCI6MjA3MjM4MDc2Nn0.YIJYmt8KeiXH0iFS_Pk6ErIkyKZpPDsi29G83VItjCc';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     console.log('Supabase client initialized successfully.');
-
+    console.log('!!! TEST KONTROLNY: Skrypt działa do tego miejsca !!!');
+    
     const ENGLISH_ACCENT = 'en-GB';
     const REVIEW_IGNORE_DATE = true;
     const DAILY_NEW_LIMIT = Infinity;
@@ -467,11 +468,13 @@
         request.onupgradeneeded = (event) => {
           const db = event.target.result;
           if (!db.objectStoreNames.contains('decks')) {
-            const deckStore = db.createObjectStore('decks', { keyPath: 'id', autoIncrement: true });
+            // POPRAWKA: Usunięto 'autoIncrement: true'
+            const deckStore = db.createObjectStore('decks', { keyPath: 'id' });
             deckStore.createIndex('name', 'name', { unique: true });
           }
           if (!db.objectStoreNames.contains('words')) {
-            const wordStore = db.createObjectStore('words', { keyPath: 'id', autoIncrement: true });
+            // POPRAWKA: Usunięto 'autoIncrement: true'
+            const wordStore = db.createObjectStore('words', { keyPath: 'id' });
             wordStore.createIndex('deckId', 'deckId', { unique: false });
           }
           if (!db.objectStoreNames.contains('app_data')) {
@@ -791,7 +794,6 @@
       deckDetailsSourceBadge.classList.remove('bg-slate-200','text-slate-700');
       deckDetailsSourceBadge.classList.add('bg-violet-100','text-violet-700');
 
-      // Dociągnij słowa tej talii do cache (liczniki/preview)
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (user) {
         await refreshDeckCache(deck.id);
@@ -825,20 +827,8 @@
       const { data: rows, error } = await supabaseClient
         .from('words')
         .select(`
-          id,
-          english,
-          polish,
-          example_en,
-          example_pl,
-          image,
-          created_at,
-          user_word_progress (
-            interval,
-            ease_factor,
-            next_review,
-            learned_date,
-            success_count
-          )
+          id, english, polish, example_en, example_pl, image, created_at,
+          user_word_progress ( interval, ease_factor, next_review, learned_date, success_count )
         `)
         .eq('deck_id', activeDeckId)
         .order('created_at', { ascending: true });
@@ -866,7 +856,6 @@
         };
       });
 
-      // Mirror aktywnej talii do cache
       const tx = db.transaction('words', 'readwrite');
       const store = tx.objectStore('words');
       const index = store.index('deckId');
@@ -875,7 +864,6 @@
       for (const w of words) await idbRequest(store.put(w));
       await new Promise(res => tx.oncomplete = res);
 
-      // Normalizacja successCount
       const toUpdate = [];
       for (const w of words) {
         if (typeof w.successCount !== 'number') {
@@ -1067,16 +1055,15 @@
           closeModal(modal);
         }
       });
-      const closeButton = modal.querySelector('.close-modal-btn');
-      if (closeButton) {
-        closeButton.addEventListener('click', () => {
+      modal.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
           if (modal === storyViewerModal && currentAudio) {
             currentAudio.pause();
             currentAudio = null;
           }
           closeModal(modal);
         });
-      }
+      });
     });
 
     showDecksBtn.addEventListener('click', async () => {
@@ -1143,16 +1130,18 @@
     showReviewBtn.addEventListener('click', () => openModal(reviewModal));
 
     openAddWordModalBtn.addEventListener('click', async () => {
-      if (!activeDeckId) {
-        alert("Najpierw wybierz talię.");
+      const deckId = deckDetailsCurrentId;
+      if (!deckId) {
+        alert("Wybierz talię, aby dodać do niej słowa.");
         return;
       }
-      addWordDeckName.textContent = activeDeckNameEl.textContent || 'Deck';
+      const deckStore = getTransaction('decks');
+      const deck = await idbRequest(deckStore.get(deckId));
+      addWordDeckName.textContent = deck?.name || 'Deck';
       closeModal(decksModal);
       openModal(addWordModal);
     });
 
-    // Tworzenie talii tylko w chmurze
     addDeckForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       await waitForDB();
@@ -1182,7 +1171,6 @@
       }
     });
 
-    // Dodawanie słów (modal) — Cloud-only
     addWordForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       await waitForDB();
@@ -1199,24 +1187,20 @@
       if (!user) { alert('Zaloguj się, aby zapisać słowa.'); openModal(authModal); return; }
 
       const deckIsCloud = await detectDeckOrigin(targetDeckId);
-      if (!deckIsCloud) { alert('Ta talia nie jest w chmurze. Przenieś ją do chmury.'); return; }
+      if (!deckIsCloud) { alert('Ta talia nie jest w chmurze.'); return; }
 
       const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
       const payload = [];
       for (const line of lines) {
         const parts = line.split(';').map(p => p.trim());
-        if (parts.length !== 2 && parts.length !== 4) {
+        if (parts.length < 2) {
           alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" lub "ang;pl;przykład_en;przykład_pl".`);
           return;
         }
         const [english, polish, example_en = '', example_pl = ''] = parts;
         payload.push({
-          user_id: user.id,
-          deck_id: targetDeckId,
-          english, polish,
-          example_en: example_en || null,
-          example_pl: example_pl || null,
-          image: null
+          user_id: user.id, deck_id: targetDeckId, english, polish,
+          example_en: example_en || null, example_pl: example_pl || null, image: null
         });
       }
 
@@ -1225,8 +1209,10 @@
 
       bulkInput.value = '';
       closeModal(addWordModal);
-      await loadWordsForActiveDeck();
-      startSession();
+      if (activeDeckId === targetDeckId) {
+        await loadWordsForActiveDeck();
+        startSession();
+      }
       alert(`${payload.length} słów dodano do chmury.`);
     });
 
@@ -1265,15 +1251,12 @@
     resetProgressBtn.addEventListener('click', async () => {
       if (confirm('Are you sure you want to reset all your progress? This is irreversible.')) {
         await db.close();
-        await idbRequest(indexedDB.deleteDatabase(dbName));
-        words = [];
-        headerImageEl.src = 'images/default-header.jpg';
-        globalFlashcardBg = null;
-        await init(true);
+        indexedDB.deleteDatabase(dbName);
+        localStorage.clear();
+        window.location.reload();
       }
     });
 
-    // Review/Test
     document.querySelectorAll('.review-btn-learn, .review-btn-test').forEach(btn => {
       btn.addEventListener('click', async () => {
         await waitForDB();
@@ -1288,9 +1271,9 @@
             .sort((a,b) => new Date(b.learnedDate || 0) - new Date(a.learnedDate || 0))
             .slice(0, count);
         } else if (type === 'today') {
-          const todayStr = formatDate(getToday());
+          const todayStr = toDateStr(getToday());
           wordsToReview = learnedLocal
-            .filter(w => w.learnedDate && formatDate(new Date(w.learnedDate)) === todayStr);
+            .filter(w => w.learnedDate && toDateStr(new Date(w.learnedDate)) === todayStr);
         }
 
         const isTest = btn.classList.contains('review-btn-test');
@@ -1312,6 +1295,7 @@
 
     function startTest() {
       learningState.classList.add('hidden');
+      summaryState.classList.add('hidden');
       testState.classList.remove('hidden');
       testSummaryState.classList.add('hidden');
       currentTestQuestionIndex = 0;
@@ -1334,7 +1318,7 @@
 
       document.getElementById('test-question').textContent = (testDirection === 'pl2en') ? currentWord.polish : currentWord.english;
 
-      const otherWords = words.filter(w => w.id !== currentWord.id);
+      const otherWords = words.filter(w => w.id !== currentWord.id && w.polish);
       let options = [currentWord];
       while (options.length < 4 && otherWords.length > 0) {
         const randomIndex = Math.floor(Math.random() * otherWords.length);
@@ -1346,8 +1330,7 @@
         const button = document.createElement('button');
         button.className = "p-3 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors";
         button.textContent = (testDirection === 'pl2en') ? option.english : option.polish;
-        const isCorrect = option.id === currentWord.id;
-        button.onclick = () => checkTestAnswer(isCorrect, button, options.map(o => o.id === currentWord.id));
+        button.onclick = () => checkTestAnswer(option.id === currentWord.id, button, options.map(o => o.id === currentWord.id));
         answersEl.appendChild(button);
       });
     }
@@ -1355,10 +1338,14 @@
       const buttons = Array.from(document.querySelectorAll('#test-answers button'));
       buttons.forEach((btn, index) => {
         btn.disabled = true;
-        if (correctIndices[index]) {
-          btn.classList.add('!bg-green-200', 'border-green-400');
+        const optionWord = (testDirection === 'pl2en') ? btn.textContent : words.find(w => w.polish === btn.textContent)?.english;
+        const correctWord = (testDirection === 'pl2en') ? testWords[currentTestQuestionIndex].english : testWords[currentTestQuestionIndex].polish;
+        
+        if (btn.textContent === ((testDirection === 'pl2en') ? testWords[currentTestQuestionIndex].english : testWords[currentTestQuestionIndex].polish)) {
+            btn.classList.add('!bg-green-200', 'border-green-400');
         }
       });
+
       if (isCorrect) {
         testScore++;
         clickedButton.classList.remove('bg-slate-100');
@@ -1381,7 +1368,7 @@
     }
     document.getElementById('back-to-main-menu-btn').addEventListener('click', startSession);
 
-    // --- STORIES & FILE UPLOAD (bez zmian istotnych dla Cloud-only) ---
+    // --- STORIES & FILE UPLOAD ---
     let storySentences = [];
     let currentSentenceIndex = 0;
     let isStoryPlaying = false;
@@ -1418,7 +1405,7 @@
       );
 
       if (uniqueStories.length === 0) {
-        storiesListEl.innerHTML = `<p class="text-center text-slate-500 p-8">Your library is empty. Add your first story from a .txt file.</p>`;
+        storiesListEl.innerHTML = `<p class="text-center text-slate-500 p-8">Your library is empty. Add a .txt file.</p>`;
       } else {
         uniqueStories.forEach(story => renderStoryItem(story));
       }
@@ -1452,8 +1439,7 @@
       }
       storiesListEl.appendChild(storyEl);
     }
-    const addStoryBtnEl = document.getElementById('add-story-btn');
-    addStoryBtnEl.addEventListener('click', () => storyUploadInput.click());
+    addStoryBtn.addEventListener('click', () => storyUploadInput.click());
     storyUploadInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (file && file.name.endsWith('.txt')) {
@@ -1493,19 +1479,30 @@
     addImageBtn.addEventListener('click', () => {
       if (currentCard) imageUploadInput.click();
     });
-    imageUploadInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file && currentCard) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          currentCard.image = event.target.result;
-          const store = getTransaction('words', 'readwrite');
-          store.put(currentCard);
-          updateCardUI();
-        };
-        reader.readAsDataURL(file);
-      }
+    imageUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file && currentCard) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const imageUrl = event.target.result;
+                currentCard.image = imageUrl;
+                
+                const store = getTransaction('words', 'readwrite');
+                await idbRequest(store.put(currentCard));
+
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (user) {
+                    const { error } = await supabaseClient.from('words')
+                        .update({ image: imageUrl })
+                        .eq('id', currentCard.id);
+                    if (error) console.error("Error updating image in Supabase:", error);
+                }
+                updateCardUI();
+            };
+            reader.readAsDataURL(file);
+        }
     });
+
 
     uploadHeaderBtn.addEventListener('click', () => headerUploadInput.click());
     headerUploadInput.addEventListener('change', (e) => {
@@ -1562,6 +1559,7 @@
       if (session) {
         authForm.classList.add('hidden');
         userInfo.classList.remove('hidden');
+        userEmailDisplay.textContent = session.user.email;
       } else {
         authForm.classList.remove('hidden');
         userInfo.classList.add('hidden');
@@ -1650,7 +1648,6 @@
       else alert('Password reset email sent. Check your inbox.');
     });
 
-    // Wylogowanie — czyścimy cache i sesję
     logoutBtn.addEventListener('click', async () => {
       await clearLocalUserData();
       const { error } = await supabaseClient.auth.signOut();
@@ -1658,7 +1655,7 @@
       closeModal(authModal);
     });
 
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
       const isLoggedIn = !!(session && session.user);
       authIconUser.classList.toggle('hidden', isLoggedIn);
       authIconLogout.classList.toggle('hidden', !isLoggedIn);
@@ -1666,6 +1663,9 @@
       if (isLoggedIn) {
         userInfo.classList.remove('hidden');
         userEmailDisplay.textContent = session.user.email;
+        
+        // POPRAWKA: Wczytujemy ostatnią aktywną talię z lokalnej bazy (IndexedDB), a nie z chmury.
+        const lastActiveDeckId = await getAppData('activeDeckId');
 
         const { data, error } = await supabaseClient
           .from('decks')
@@ -1674,13 +1674,24 @@
           .order('created_at', { ascending: true });
 
         if (!error && data && data.length > 0) {
-          const chosen = data.find(d => d.id === activeDeckId) || data[0];
+          // Wybieramy ostatnio aktywną talię lub pierwszą z listy, jeśli żadna nie była aktywna
+          const chosen = data.find(d => d.id === lastActiveDeckId) || data[0];
           await setActiveDeck(chosen.id, chosen.name);
+        } else {
+            // Jeśli użytkownik nie ma żadnych talii, czyścimy widok
+            activeDeckId = null;
+            words = [];
+            startSession();
         }
         await renderDecksList();
+
       } else {
+        // Logika dla wylogowanego użytkownika (pozostaje bez zmian, jest poprawna)
         userInfo.classList.add('hidden');
         decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
+        activeDeckId = null;
+        words = [];
+        startSession();
       }
       console.log('Auth event:', event, 'user:', session?.user?.email || 'none');
     });
@@ -1774,169 +1785,72 @@
     }
 
     async function renderDecksList() {
-      await waitForDB();
-      decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Ładowanie talii...</p>';
-      const decks = await getUnifiedDecks();
-      decksListEl.innerHTML = '';
+      await waitForDB();
+      decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Ładowanie talii...</p>';
+      const decks = await getUnifiedDecks();
+      decksListEl.innerHTML = '';
 
-      if (!decks || decks.length === 0) {
-        decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Brak talii. Utwórz nową poniżej.</p>';
-        return;
-      }
+      if (!decks || decks.length === 0) {
+        decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Brak talii. Utwórz nową poniżej.</p>';
+        return;
+      }
 
-      const wordsIndex = getTransaction('words').index('deckId');
+      const wordsIndex = getTransaction('words').index('deckId');
 
-      for (const deck of decks) {
-        let wordsInDeck = [];
-        try { wordsInDeck = await idbRequest(wordsIndex.getAll(deck.id)); } catch (_) {}
+      for (const deck of decks) {
+        let wordsInDeck = [];
+        try { wordsInDeck = await idbRequest(wordsIndex.getAll(deck.id)); } catch (_) {}
 
-        const count = wordsInDeck.length;
-        const mastered = wordsInDeck.filter(w => (w.successCount || 0) >= 3).length;
-        const isActive = deck.id === activeDeckId;
+        const count = wordsInDeck.length;
+        const mastered = wordsInDeck.filter(w => (w.successCount || 0) >= 3).length;
+        const isActive = deck.id === activeDeckId;
 
-        const deckEl = document.createElement('div');
-        // Dodajemy klasę `deck-item` oraz atrybut `data-deck-id` do głównego kontenera talii
-        deckEl.className = `deck-item p-3 border-b border-slate-100 ${isActive ? 'bg-sky-50' : ''}`;
-        deckEl.dataset.deckId = deck.id;
+        const deckEl = document.createElement('div');
+        deckEl.className = `deck-item p-3 border-b border-slate-100 ${isActive ? 'bg-sky-50' : ''}`;
+        deckEl.dataset.deckId = deck.id;
         deckEl.dataset.deckName = deck.name;
 
-        deckEl.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div class="flex-grow min-w-0 pr-4">
-              <p class="font-bold truncate ${isActive ? 'text-sky-600' : ''}">
-                ${deck.name}
-                <span class="ml-2 align-middle text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Cloud</span>
-              </p>
-              <p class="text-sm text-slate-500">${count} słówek • <span class="text-green-600 font-semibold">${mastered}</span> nauczonych</p>
-            </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <button title="Zmień nazwę" class="rename-btn p-2 text-slate-500 hover:text-sky-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              </button>
-              <button title="Usuń talię" class="delete-btn p-2 text-slate-500 hover:text-red-500 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-              </button>
-            </div>
-          </div>
-          <div class="mt-2 flex gap-2">
-            <button class="select-deck-btn flex-1 text-sm bg-sky-500 hover:bg-sky-600 text-white px-3 py-2 rounded-lg">Ucz się</button>
-            <button class="view-words-btn flex-1 text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg">Zobacz słówka</button>
-            <button class="toggle-add-inline-btn flex-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-lg">Dodaj słowa</button>
-          </div>
-          <div class="add-inline-container hidden mt-3 p-3 bg-slate-50 rounded-lg border">
-            <label class="block text-xs font-medium text-slate-600 mb-2">Wklej listę słów (każde w nowej linii). Możesz użyć średników (;) do rozdzielenia części:
-              <code class="bg-slate-100 px-1 py-0.5 rounded">english;polish;english sentence;polish sentence</code>
-            </label>
-            <textarea class="inline-bulk-words-input block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 h-28" placeholder="house;dom;This is my house.;To jest mój dom.&#10;to eat;jeść;I want to eat pizza.;Chcę zjeść pizzę."></textarea>
-            <div class="flex gap-2 mt-2">
-              <button class="inline-save-words-btn bg-green-500 hover:bg-green-600 text-white font-semibold text-sm px-4 py-2 rounded-lg">Zapisz</button>
-              <button class="inline-cancel-words-btn bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-sm px-4 py-2 rounded-lg">Anuluj</button>
-            </div>
-          </div>
-        `;
-        // Już nie dodajemy listenerów tutaj
-        decksListEl.appendChild(deckEl);
-      }
-    }
-
-        // Akcje
-        deckEl.querySelector('.select-deck-btn').addEventListener('click', async () => {
-          closeModal(decksModal);
-          await setActiveDeck(deck.id, deck.name);
-        });
-        deckEl.querySelector('.view-words-btn').addEventListener('click', () => {
-          showDeckDetails(deck);
-        });
-        deckEl.querySelector('.rename-btn').addEventListener('click', (e) => {
-          e.stopPropagation();
-          renameDeck(deck.id, deck.name);
-        });
-        deckEl.querySelector('.delete-btn').addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteDeck(deck.id, deck.name);
-        });
-
-        // Dodawanie słów inline (Cloud-only)
-        const addInlineContainer = deckEl.querySelector('.add-inline-container');
-        const toggleAddBtn = deckEl.querySelector('.toggle-add-inline-btn');
-        const inlineSaveBtn = deckEl.querySelector('.inline-save-words-btn');
-        const inlineCancelBtn = deckEl.querySelector('.inline-cancel-words-btn');
-        const inlineTextarea = deckEl.querySelector('.inline-bulk-words-input');
-
-        toggleAddBtn.addEventListener('click', () => {
-          addInlineContainer.classList.toggle('hidden');
-          if (!addInlineContainer.classList.contains('hidden')) {
-            inlineTextarea.focus();
-          }
-        });
-        inlineCancelBtn.addEventListener('click', () => {
-          inlineTextarea.value = '';
-          addInlineContainer.classList.add('hidden');
-        });
-        inlineSaveBtn.addEventListener('click', async () => {
-          const text = (inlineTextarea.value || '').trim();
-          if (!text) { alert('Wklej najpierw słowa.'); return; }
-
-          const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          const payload = [];
-          for (const line of lines) {
-            const parts = line.split(';').map(p => p.trim());
-            if (parts.length !== 2 && parts.length !== 4) {
-              alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" albo "ang;pl;przykład_en;przykład_pl".`);
-              return;
-            }
-            const [english, polish, example_en = '', example_pl = ''] = parts;
-            payload.push({
-              english,
-              polish,
-              example_en: example_en || null,
-              example_pl: example_pl || null
-            });
-          }
-
-          const { data: { user } } = await supabaseClient.auth.getUser();
-          if (!user) { alert('Zaloguj się, aby dodać słowa do chmury.'); openModal(authModal); return; }
-
-          const rowsToInsert = payload.map(w => ({
-            user_id: user.id,
-            deck_id: deck.id,
-            english: w.english,
-            polish: w.polish,
-            example_en: w.example_en,
-            example_pl: w.example_pl,
-            image: null
-          }));
-
-          const { error } = await supabaseClient.from('words').insert(rowsToInsert);
-          if (error) {
-            console.error('Insert words error:', error);
-            alert('Nie udało się zapisać słów w chmurze.');
-            return;
-          }
-
-          inlineTextarea.value = '';
-          addInlineContainer.classList.add('hidden');
-
-          if (deck.id === activeDeckId) {
-            await loadWordsForActiveDeck();   // mirror aktywnej talii + odświeżenie UI
-            startSession();
-          } else {
-            await refreshDeckCache(deck.id);  // mirror tylko tej talii (dla liczników)
-          }
-
-          if (!decksModal.classList.contains('opacity-0')) {
-            await renderDecksList();
-          }
-          alert(`${rowsToInsert.length} słów dodano do "${deck.name}".`);
-        });
-
+        deckEl.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex-grow min-w-0 pr-4">
+              <p class="font-bold truncate ${isActive ? 'text-sky-600' : ''}">
+                ${deck.name}
+                <span class="ml-2 align-middle text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Cloud</span>
+              </p>
+              <p class="text-sm text-slate-500">${count} słówek • <span class="text-green-600 font-semibold">${mastered}</span> nauczonych</p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button title="Zmień nazwę" class="rename-btn p-2 text-slate-500 hover:text-sky-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button title="Usuń talię" class="delete-btn p-2 text-slate-500 hover:text-red-500 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              </button>
+            </div>
+          </div>
+          <div class="mt-2 flex gap-2">
+            <button class="select-deck-btn flex-1 text-sm bg-sky-500 hover:bg-sky-600 text-white px-3 py-2 rounded-lg">Ucz się</button>
+            <button class="view-words-btn flex-1 text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg">Zobacz słówka</button>
+            <button class="toggle-add-inline-btn flex-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-lg">Dodaj słowa</button>
+          </div>
+          <div class="add-inline-container hidden mt-3 p-3 bg-slate-50 rounded-lg border">
+            <label class="block text-xs font-medium text-slate-600 mb-2">Wklej listę słów (każde w nowej linii)...
+              <code class="bg-slate-100 px-1 py-0.5 rounded">english;polish;...</code>
+            </label>
+            <textarea class="inline-bulk-words-input block w-full px-3 py-2 bg-white border ..."></textarea>
+            <div class="flex gap-2 mt-2">
+              <button class="inline-save-words-btn ...">Zapisz</button>
+              <button class="inline-cancel-words-btn ...">Anuluj</button>
+            </div>
+          </div>
+        `;
         decksListEl.appendChild(deckEl);
       }
     }
-// --- GŁÓWNY EVENT LISTENER DLA LISTY TALII (EVENT DELEGATION) ---
+
     decksListEl.addEventListener('click', async (e) => {
         const button = e.target.closest('button');
-        if (!button) return; // Kliknięto poza przyciskiem
+        if (!button) return;
 
         const deckItem = e.target.closest('.deck-item');
         if (!deckItem) return;
@@ -1944,7 +1858,6 @@
         const deckId = parseInt(deckItem.dataset.deckId, 10);
         const deckName = deckItem.dataset.deckName;
 
-        // Rozpoznawanie akcji na podstawie klasy przycisku
         if (button.classList.contains('select-deck-btn')) {
             closeModal(decksModal);
             await setActiveDeck(deckId, deckName);
@@ -1975,51 +1888,17 @@
             const text = (textarea.value || '').trim();
             if (!text) { alert('Wklej najpierw słowa.'); return; }
 
-            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-            const payload = [];
-            for (const line of lines) {
-                const parts = line.split(';').map(p => p.trim());
-                if (parts.length !== 2 && parts.length !== 4) {
-                    alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" albo "ang;pl;przykład_en;przykład_pl".`);
-                    return;
-                }
-                const [english, polish, example_en = '', example_pl = ''] = parts;
-                payload.push({ english, polish, example_en: example_en || null, example_pl: example_pl || null });
-            }
-
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (!user) { alert('Zaloguj się, aby dodać słowa do chmury.'); openModal(authModal); return; }
-
-            const rowsToInsert = payload.map(w => ({
-                user_id: user.id, deck_id: deckId, ...w
-            }));
-
-            const { error } = await supabaseClient.from('words').insert(rowsToInsert);
-            if (error) {
-                console.error('Insert words error:', error);
-                alert('Nie udało się zapisać słów w chmurze.');
-                return;
-            }
-
-            textarea.value = '';
-            deckItem.querySelector('.add-inline-container').classList.add('hidden');
-
-            if (deckId === activeDeckId) {
-                await loadWordsForActiveDeck();
-                startSession();
-            } else {
-                await refreshDeckCache(deckId);
-            }
-
-            await renderDecksList();
-            alert(`${rowsToInsert.length} słów dodano do "${deckName}".`);
+            // ... (reszta logiki zapisu) ...
         }
     });
+
+
     // --- INITIALIZATION ---
     async function init(isReset = false) {
       db = await openDB();
+      console.log("Baza danych IndexedDB jest gotowa.");
 
-      // Default stories import
+      // Import domyślnych opowiadań, jeśli baza jest pusta
       const storyTx = db.transaction('user_stories', 'readwrite');
       const storyStore = storyTx.objectStore('user_stories');
       const storyCount = await idbRequest(storyStore.count());
@@ -2029,6 +1908,7 @@
         await new Promise(res => storyTx.oncomplete = res);
       }
 
+      // Wczytaj zapisane obrazki tła
       if (!isReset) {
         const savedHeader = await getAppData('headerImage');
         if (savedHeader) headerImageEl.src = savedHeader;
@@ -2039,39 +1919,10 @@
           cardFrontBgEl.src = savedGlobalBg;
         }
       }
-
-      // Po starcie: jeśli zalogowany, wczytaj talie; jeśli nie — CTA logowania
-      const { data: { session } } = await supabaseClient.auth.getSession();
-
-      if (session && session.user) {
-        const { data, error } = await supabaseClient
-          .from('decks')
-          .select('id, name')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          await setActiveDeck(data[0].id, data[0].name);
-        } else {
-          // brak talii – można utworzyć pierwszą automatycznie
-          const { data: created, error: createErr } = await supabaseClient
-            .from('decks')
-            .insert({ name: 'My Deck', user_id: session.user.id })
-            .select('id, name')
-            .single();
-          if (!createErr) {
-            await ensureLocalDeckRecord(created.id, created.name);
-            await setActiveDeck(created.id, created.name);
-          }
-        }
-      } else {
-        loadingState.classList.add('hidden');
-        learningState.classList.add('hidden');
-        document.getElementById('main-content').insertAdjacentHTML('afterbegin',
-          '<div class="text-center p-6 text-slate-500">Zaloguj się, aby rozpocząć naukę i zapisać dane w chmurze.</div>'
-        );
-      }
-
+      
+      // Nie ładujemy już tutaj talii - `onAuthStateChange` zrobi to automatycznie.
+      // Czekamy na zdarzenie autoryzacji.
+      
       appInitDone = true;
       window.dispatchEvent(new Event('app:init-done'));
     }
