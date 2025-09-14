@@ -367,7 +367,7 @@
 
 <script>
 // ===================================================================================
-// KEYWORD APP - FIREBASE VERSION - KROK 2: LOGOWANIE
+// KEYWORD APP - FIREBASE VERSION - KROK 3: TALIE I SŁÓWKA
 // ===================================================================================
 document.addEventListener('DOMContentLoaded', async () => {
     // --- FIREBASE & APP CONFIGURATION ---
@@ -381,26 +381,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       measurementId: "G-9J5Q0E7ZR3"
     };
 
-    // Inicjalizacja Firebase i usług
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-    let currentUser = null; // Będziemy tu przechowywać info o zalogowanym użytkowniku
+    let currentUser = null;
 
-    console.log('Firebase initialized successfully.');
-
-
-    const ENGLISH_ACCENT = 'en-GB';
-    const REVIEW_IGNORE_DATE = true;
-    const DAILY_NEW_LIMIT = Infinity;
-
-    // --- DOM ELEMENTS (pozostają bez zmian na razie) ---
+    // --- DOM ELEMENTS ---
     const loadingState = document.getElementById('loading-state');
-    const summaryState = document.getElementById('summary-state');
-    const learningState = document.getElementById('learning-state');
-    // ... (reszta elementów DOM, nie musimy ich tu wszystkich wymieniać)
-
-    // --- ELEMENTY Związane z Logowaniem ---
     const authModal = document.getElementById('auth-modal');
     const authForm = document.getElementById('auth-form');
     const loginBtn = document.getElementById('login-btn');
@@ -413,8 +400,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authIconUser = document.getElementById('auth-icon-user');
     const authIconLogout = document.getElementById('auth-icon-logout');
     const showAuthBtn = document.getElementById('show-auth-btn');
+    const decksModal = document.getElementById('decks-modal');
+    const decksListEl = document.getElementById('decks-list');
+    const addDeckForm = document.getElementById('add-deck-form');
+    const showDecksBtn = document.getElementById('show-decks-btn');
+    const addWordModal = document.getElementById('add-word-modal');
+    const addWordForm = document.getElementById('add-word-form');
+    const bulkWordsInput = document.getElementById('bulk-words-input');
+    const openAddWordModalBtn = document.getElementById('open-add-word-modal-btn');
+    const addWordDeckName = document.getElementById('add-word-deck-name');
+    const deckDetailsView = document.getElementById('deck-details-view');
+    const deckDetailsName = document.getElementById('deck-details-name');
+    const deckDetailsWords = document.getElementById('deck-details-words');
 
-    // Funkcje do otwierania/zamykania modali (bez zmian)
+    let currentDeckId = null; // Przechowuje ID aktywnej talii
+    let currentDeckName = '';
+
+    // Funkcje do otwierania/zamykania modali
     function openModal(modal) {
       modal.classList.remove('pointer-events-none', 'opacity-0');
       modal.querySelector('.modal-content').classList.remove('scale-95');
@@ -427,79 +429,175 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.addEventListener('click', () => closeModal(btn.closest('.modal')));
     });
 
-
-    // ==========================================================
-    // NOWA LOGIKA LOGOWANIA (FIREBASE)
-    // ==========================================================
-
-    showAuthBtn.addEventListener('click', () => {
-        authErrorMessage.classList.add('hidden');
-        authSuccessMessage.classList.add('hidden');
-        openModal(authModal);
-    });
-
+    // --- AUTHENTICATION LOGIC (bez zmian) ---
+    showAuthBtn.addEventListener('click', () => openModal(authModal));
     authForm.addEventListener('submit', (e) => e.preventDefault());
-
-    // --- REJESTRACJA UŻYTKOWNIKA ---
     registerBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        authErrorMessage.classList.add('hidden');
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value;
-
         auth.createUserWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                console.log('Zarejestrowano pomyślnie!', userCredential.user);
+            .then(cred => cred.user.sendEmailVerification())
+            .then(() => {
                 authForm.classList.add('hidden');
-                authSuccessMessage.classList.remove('hidden'); // Pokaż wiadomość o sukcesie
-                // Nie zamykamy modala, żeby użytkownik zobaczył wiadomość
+                authSuccessMessage.classList.remove('hidden');
             })
-            .catch((error) => {
-                authErrorMessage.textContent = error.message;
-                authErrorMessage.classList.remove('hidden');
-            });
+            .catch(err => authErrorMessage.textContent = err.message);
     });
-
-    // --- LOGOWANIE UŻYTKOWNIKA ---
     loginBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        authErrorMessage.classList.add('hidden');
         const email = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value;
-
         auth.signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                console.log('Zalogowano pomyślnie!', userCredential.user);
-                closeModal(authModal);
-                authForm.reset();
+            .then(cred => {
+                if (!cred.user.emailVerified) {
+                    auth.signOut();
+                    alert('Proszę najpierw zweryfikować adres e-mail.');
+                } else {
+                    closeModal(authModal);
+                }
             })
-            .catch((error) => {
-                authErrorMessage.textContent = error.message;
-                authErrorMessage.classList.remove('hidden');
+            .catch(err => authErrorMessage.textContent = err.message);
+    });
+    logoutBtn.addEventListener('click', () => auth.signOut());
+
+    // ==========================================================
+    // NOWA LOGIKA DLA TALII I SŁÓWEK (FIRESTORE)
+    // ==========================================================
+    
+    // --- Wyświetlanie talii ---
+    async function renderDecks() {
+        if (!currentUser) return;
+        decksListEl.innerHTML = '<p>Ładowanie talii...</p>';
+        
+        db.collection('decks').where('userId', '==', currentUser.uid).onSnapshot(snapshot => {
+            if (snapshot.empty) {
+                decksListEl.innerHTML = '<p>Brak talii. Utwórz pierwszą poniżej.</p>';
+                return;
+            }
+            decksListEl.innerHTML = '';
+            snapshot.forEach(doc => {
+                const deck = { id: doc.id, ...doc.data() };
+                const deckEl = document.createElement('div');
+                deckEl.className = 'p-3 border-b';
+                deckEl.innerHTML = `
+                    <p class="font-bold">${deck.name}</p>
+                    <div class="mt-2 flex gap-2">
+                        <button class="select-deck-btn flex-1 text-sm bg-sky-500 text-white px-3 py-2 rounded-lg" data-deck-id="${deck.id}" data-deck-name="${deck.name}">Ucz się</button>
+                        <button class="view-words-btn flex-1 text-sm bg-slate-200 text-slate-700 px-3 py-2 rounded-lg" data-deck-id="${deck.id}" data-deck-name="${deck.name}">Zobacz słówka</button>
+                    </div>
+                `;
+                decksListEl.appendChild(deckEl);
             });
-    });
-
-    // --- WYLOGOWANIE UŻYTKOWNIKA ---
-    logoutBtn.addEventListener('click', () => {
-        auth.signOut().then(() => {
-            console.log('Wylogowano.');
-            closeModal(authModal);
         });
+    }
+
+    // --- Tworzenie nowej talii ---
+    addDeckForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        const deckNameInput = document.getElementById('new-deck-name');
+        const deckName = deckNameInput.value.trim();
+        if (deckName) {
+            db.collection('decks').add({
+                name: deckName,
+                userId: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                deckNameInput.value = '';
+            }).catch(err => console.error("Błąd tworzenia talii:", err));
+        }
     });
 
+    // --- Obsługa kliknięć w liście talii ---
+    decksListEl.addEventListener('click', (e) => {
+        const target = e.target;
+        currentDeckId = target.dataset.deckId;
+        currentDeckName = target.dataset.deckName;
+        
+        if (target.classList.contains('select-deck-btn')) {
+            // Logika nauki (na później)
+            alert(`Rozpoczynamy naukę z talii: ${currentDeckName}`);
+            closeModal(decksModal);
+        }
+        if (target.classList.contains('view-words-btn')) {
+            renderWordsForDeck(currentDeckId, currentDeckName);
+        }
+    });
 
-    // --- OBSERWATOR STANU ZALOGOWANIA (NAJWAŻNIEJSZA CZĘŚĆ) ---
-    // Ta funkcja automatycznie zarządza interfejsem w zależności od tego,
-    // czy użytkownik jest zalogowany, czy nie.
+    // --- Wyświetlanie słówek dla wybranej talii ---
+    function renderWordsForDeck(deckId, deckName) {
+        deckDetailsName.textContent = deckName;
+        deckDetailsView.classList.remove('hidden');
+        deckDetailsWords.innerHTML = 'Ładowanie słówek...';
+
+        db.collection('decks').doc(deckId).collection('words').orderBy('createdAt').onSnapshot(snapshot => {
+            if (snapshot.empty) {
+                deckDetailsWords.innerHTML = '<p>Brak słówek w tej talii.</p>';
+                return;
+            }
+            deckDetailsWords.innerHTML = '';
+            snapshot.forEach(doc => {
+                const word = doc.data();
+                deckDetailsWords.innerHTML += `<div class="text-sm py-1">${word.english} - ${word.polish}</div>`;
+            });
+        });
+    }
+
+    // --- Pokazywanie modala z dodawaniem słówek ---
+    openAddWordModalBtn.addEventListener('click', () => {
+        if (!currentDeckId) {
+            alert("Najpierw wybierz talię, klikając 'Zobacz słówka'.");
+            return;
+        }
+        addWordDeckName.textContent = currentDeckName;
+        closeModal(decksModal);
+        openModal(addWordModal);
+    });
+
+    // --- Dodawanie nowych słówek ---
+    addWordForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = bulkWordsInput.value.trim();
+        if (!text || !currentDeckId) return;
+
+        const lines = text.split('\n').filter(Boolean);
+        // Używamy "batch write" do zapisu wielu słówek naraz - jest to bardziej wydajne
+        const batch = db.batch();
+
+        lines.forEach(line => {
+            const parts = line.split(';').map(p => p.trim());
+            const [english, polish, example_en = '', example_pl = ''] = parts;
+            if (english && polish) {
+                const wordRef = db.collection('decks').doc(currentDeckId).collection('words').doc();
+                batch.set(wordRef, {
+                    english,
+                    polish,
+                    example_en,
+                    example_pl,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        });
+
+        batch.commit().then(() => {
+            console.log(`${lines.length} słówek dodano pomyślnie.`);
+            bulkWordsInput.value = '';
+            closeModal(addWordModal);
+            openModal(decksModal);
+        }).catch(err => console.error("Błąd dodawania słówek:", err));
+    });
+
+    // --- OBSERWATOR STANU ZALOGOWANIA ---
     auth.onAuthStateChanged(user => {
-        currentUser = user; // Aktualizujemy globalną zmienną
+        currentUser = user;
         const isLoggedIn = !!user;
+        const isVerified = user ? user.emailVerified : false;
 
-        // Aktualizuj ikony w głównej nawigacji
         authIconUser.classList.toggle('hidden', isLoggedIn);
         authIconLogout.classList.toggle('hidden', !isLoggedIn);
 
-        // Zarządzaj widokiem wewnątrz modala logowania
         if (isLoggedIn) {
             authForm.classList.add('hidden');
             userInfo.classList.remove('hidden');
@@ -509,20 +607,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             userInfo.classList.add('hidden');
         }
 
-        if (isLoggedIn) {
-            console.log('Użytkownik jest zalogowany:', user.email);
-            // Tutaj w przyszłości będziemy ładować talie użytkownika
+        if (isLoggedIn && isVerified) {
+            console.log('Użytkownik zalogowany i zweryfikowany:', user.email);
+            // Gdy użytkownik jest zalogowany, nasłuchujemy na zmiany w jego taliach
+            renderDecks();
+            loadingState.style.display = 'none';
         } else {
-            console.log('Użytkownik wylogowany.');
-            // Tutaj w przyszłości będziemy czyścić dane lokalne
+            console.log('Użytkownik wylogowany lub niezweryfikowany.');
+            decksListEl.innerHTML = '<p>Zaloguj się i zweryfikuj e-mail, aby zobaczyć swoje talie.</p>';
         }
     });
 
-    // --- Na razie wyłączamy inicjalizację IndexedDB, żeby nie powodowała błędów ---
-    // init();
-
-    loadingState.innerHTML = '<p class="text-slate-500">Aplikacja gotowa. Zaloguj się lub zarejestruj, używając ikony użytkownika.</p>';
-
+    showDecksBtn.addEventListener('click', () => {
+        if (currentUser && currentUser.emailVerified) {
+            deckDetailsView.classList.add('hidden');
+            openModal(decksModal);
+        } else {
+            openModal(authModal);
+        }
+    });
 
 }); // DOMContentLoaded end
 </script>
