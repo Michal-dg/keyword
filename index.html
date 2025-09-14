@@ -582,24 +582,34 @@
     });
 
     // --- SPEECH ---
-    function nativeSpeak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEnd) {
-      if (!text || !('speechSynthesis' in window)) {
-        onEnd?.();
-        return;
-      }
-      if (currentAudio && !currentAudio.paused) {
-        currentAudio.pause();
-        currentAudio = null;
-      }
-      if (synth.speaking) {
-        synth.cancel();
-      }
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = lang;
-      utter.rate = rate;
-      utter.onend = () => onEnd?.();
-      synth.speak(utter);
-    }
+    // --- SPEECH ---
+function nativeSpeak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEnd) {
+  if (!text || !('speechSynthesis' in window)) {
+    onEnd?.();
+    return;
+  }
+
+  // wycisz ewentualne poprzednie dźwięki
+  if (currentAudio && !currentAudio.paused) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  if (synth.speaking) synth.cancel();
+
+  // spróbuj wybrać głos Google z akcentem UK
+  const voices = speechSynthesis.getVoices();
+  const googleUk = voices.find(
+    v => v.lang === lang && v.name.toLowerCase().includes('google')
+  );
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang  = lang;          // 'en-GB' → brytyjski
+  utter.voice = googleUk || null;
+  utter.rate  = rate;
+  utter.onend = () => onEnd?.();
+
+  synth.speak(utter);
+}
 
     async function speak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEnd) {
       // Fallback to Web Speech for now
