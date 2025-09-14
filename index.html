@@ -927,7 +927,7 @@ function nativeSpeak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEnd) {
         return;
       }
       const today = getToday();
-      const unlearned = words.filter(w => !w.isLearning && (w.interval || 0) === 0);
+      const unlearned = words.filter(w => (w.interval || 0) === 0);
       const due = words.filter(w => (w.interval || 0) > 0 && (REVIEW_IGNORE_DATE || (w.nextReview && w.nextReview.toDate() <= today)));
       newQueue = unlearned.slice(0, DAILY_NEW_LIMIT);
       reviewQueue = due.sort(() => Math.random() - 0.5);
