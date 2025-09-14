@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
             decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
             return;
         }
-
+        console.log("Próbuję pobrać talie dla userId:", user.uid); 
         decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Ładowanie talii...</p>';
         
         if (unsubscribeDecks) unsubscribeDecks();
