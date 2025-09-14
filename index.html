@@ -442,8 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (unsubscribeDecks) unsubscribeDecks();
 
-        unsubscribeDecks = db.collection('decks').where('userId', '==', user.uid).orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
+        unsubscribeDecks = db.collection('decks').where('userId', '==', user.uid)
+    .onSnapshot(snapshot => {
                 if (snapshot.empty) {
                     decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Nie masz jeszcze żadnych talii.</p>';
                     return;
