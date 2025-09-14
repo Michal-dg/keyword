@@ -378,7 +378,7 @@
       ```
 <script>
 // ===================================================================================
-// KEYWORD APP - FIREBASE VERSION - POPRAWIONA I DZIAŁAJĄCA LOGIKA
+// KEYWORD APP - FIREBASE VERSION - POPRAWIONY PRZYCISK TALIE
 // ===================================================================================
 document.addEventListener('DOMContentLoaded', () => {
     // --- FIREBASE & APP CONFIGURATION ---
@@ -397,25 +397,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
     let currentUser = null;
 
-    // --- POPRAWIONE POBIERANIE ELEMENTÓW DOM ---
+    // --- DOM ELEMENTS ---
     const mainContent = document.getElementById('main-content');
     const authModal = document.getElementById('auth-modal');
+    const decksModal = document.getElementById('decks-modal');
     const authForm = document.getElementById('auth-form');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const authErrorMessage = document.getElementById('auth-error-message');
-    const authSuccessMessage = document.getElementById('auth-success-message');
-    const userInfo = document.getElementById('user-info'); // Poprawny ID z modala
-    const userEmailDisplay = document.getElementById('user-email-display'); // Poprawny ID z modala
+    const userInfo = document.getElementById('user-info');
+    const userEmailDisplay = document.getElementById('user-email-display');
     const authIconUser = document.getElementById('auth-icon-user');
     const authIconLogout = document.getElementById('auth-icon-logout');
     const showAuthBtn = document.getElementById('show-auth-btn');
+    const showDecksBtn = document.getElementById('show-decks-btn');
 
-    // Elementy nowego ekranu weryfikacji
+    // Elementy ekranu weryfikacji
     const verifyEmailContainer = document.getElementById('verify-email-container');
     const verifyEmailAddress = document.getElementById('verify-email-address');
     const resendVerificationButton = document.getElementById('resend-verification-button');
+    const verificationLogoutButton = document.getElementById('verification-logout-button');
 
     // Funkcje do otwierania/zamykania modali
     function openModal(modal) {
@@ -430,43 +432,38 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => closeModal(btn.closest('.modal')));
     });
 
-    // --- POPRAWIONA LOGIKA LOGOWANIA ---
+    // --- LOGIKA APLIKACJI ---
 
-    // Główna funkcja zarządzająca tym, co widzi użytkownik
     function updateUI(user) {
         const isLoggedIn = !!user;
         const isVerified = user ? user.emailVerified : false;
 
-        // Główne ikony nawigacji
         authIconUser.classList.toggle('hidden', isLoggedIn);
         authIconLogout.classList.toggle('hidden', !isLoggedIn);
 
-        // Zarządzanie widocznością głównych kontenerów
-        if (isLoggedIn) {
-            if (isVerified) {
-                // ZALOGOWANY I ZWERYFIKOWANY -> POKAŻ APLIKACJĘ
-                mainContent.style.display = 'block';
-                verifyEmailContainer.style.display = 'none';
-                console.log("Dostęp przyznany dla:", user.email);
-            } else {
-                // ZALOGOWANY, ALE NIEZWERYFIKOWANY -> POKAŻ EKRAN WERYFIKACJI
-                mainContent.style.display = 'none';
-                verifyEmailContainer.style.display = 'block';
-                verifyEmailAddress.textContent = user.email;
-            }
-        } else {
-            // WYLOGOWANY -> POKAŻ APLIKACJĘ (z widokiem początkowym)
+        if (isLoggedIn && isVerified) {
             mainContent.style.display = 'block';
             verifyEmailContainer.style.display = 'none';
-            // Tutaj w przyszłości zresetujemy stan aplikacji
+        } else if (isLoggedIn && !isVerified) {
+            mainContent.style.display = 'none';
+            verifyEmailContainer.style.display = 'block';
+            verifyEmailAddress.textContent = user.email;
+        } else {
+            mainContent.style.display = 'block';
+            verifyEmailContainer.style.display = 'none';
+            // Tutaj w przyszłości zresetujemy stan, aby pokazać widok dla gościa
         }
     }
 
-    auth.onAuthStateChanged(updateUI);
+    auth.onAuthStateChanged(user => {
+        currentUser = user;
+        updateUI(user);
+    });
 
     // --- AKCJE PRZYCISKÓW ---
+    
+    // Przycisk otwierający modal logowania/panel użytkownika
     showAuthBtn.addEventListener('click', () => {
-        // Logika wewnątrz modala jest zarządzana przez onAuthStateChanged
         const user = auth.currentUser;
         if (user) {
             userInfo.classList.remove('hidden');
@@ -479,7 +476,16 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(authModal);
     });
     
-    authForm.addEventListener('submit', (e) => e.preventDefault());
+    // POPRAWIONY PRZYCISK TALII
+    showDecksBtn.addEventListener('click', () => {
+        if (currentUser && currentUser.emailVerified) {
+            // Jeśli użytkownik jest zalogowany i zweryfikowany, otwórz modal z taliami
+            openModal(decksModal);
+        } else {
+            // W przeciwnym razie, otwórz modal logowania
+            openModal(authModal);
+        }
+    });
 
     registerBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -509,6 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     logoutBtn.addEventListener('click', () => auth.signOut().then(() => closeModal(authModal)));
+    verificationLogoutButton.addEventListener('click', () => auth.signOut());
 
     resendVerificationButton.addEventListener('click', () => {
         const user = auth.currentUser;
