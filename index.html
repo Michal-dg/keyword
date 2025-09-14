@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Keyword: Master English</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-title" content="Keyword">
   <link rel="apple-touch-icon" href="icons/icon-192x192.png">
   <link rel="icon" href="/icons/icon-192x192.png" type="image/png">
-  <script src="words_db_en.js"></script>
+  <!-- Te pliki mogą pozostać; nie wymagamy już initialWordList -->
   <script src="stories_db_en.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; }
@@ -197,7 +197,7 @@
         <h3 class="font-bold mb-2 flex items-center gap-2">
           Słówka w talii:
           <span id="deck-details-name" class="text-sky-600"></span>
-          <span id="deck-details-source-badge" class="text-xs px-2 py-1 rounded-full bg-slate-200 text-slate-700"></span>
+          <span id="deck-details-source-badge" class="text-xs px-2 py-1 rounded-full bg-slate-200 text-slate-700">Cloud</span>
         </h3>
         <div id="deck-details-words" class="max-h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50"></div>
         <button id="open-add-word-modal-btn" class="w-full mt-4 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors text-sm">Add Words to this Deck</button>
@@ -369,7 +369,7 @@
 
   <script>
   // ===================================================================================
-  // KEYWORD APP - FULL SCRIPT (ENGLISH VERSION) - UPDATED
+  // KEYWORD APP - CLOUD-ONLY (Supabase as source of truth) + IndexedDB cache mirror
   // ===================================================================================
   document.addEventListener('DOMContentLoaded', async () => {
     // --- SUPABASE & APP CONFIGURATION ---
@@ -379,14 +379,8 @@
     console.log('Supabase client initialized successfully.');
 
     const ENGLISH_ACCENT = 'en-GB';
-    // CONFIG: wyłączenie limitów dziennych
-    const REVIEW_IGNORE_DATE = true; // true => pokaż wszystkie słowa do powtórki, niezależnie od daty
-    const DAILY_NEW_LIMIT = Infinity; // Infinity => brak limitu nowych słów dziennie
-
-    if (typeof initialWordList === 'undefined') {
-      document.getElementById('loading-state').innerHTML = '<p class="text-red-500 font-bold">Error: Could not load word database. Make sure `words_db_en.js` is in the same folder.</p>';
-      return;
-    }
+    const REVIEW_IGNORE_DATE = true;
+    const DAILY_NEW_LIMIT = Infinity;
 
     // 1) Obsługa powrotu z maila (ustawianie sesji + reset hasła)
     async function handleAuthRedirectFromEmail() {
@@ -395,7 +389,7 @@
       const params = new URLSearchParams(hash);
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
-      const type = params.get('type'); // 'signup' albo 'recovery'
+      const type = params.get('type');
       if (access_token && refresh_token) {
         const { error } = await supabaseClient.auth.setSession({ access_token, refresh_token });
         if (error) {
@@ -420,7 +414,7 @@
     async function clearLocalUserData() {
       console.log('Clearing local user data from IndexedDB...');
       await waitForDB();
-      const storesToClear = ['decks', 'words', 'user_stories'];
+      const storesToClear = ['decks', 'words', 'user_stories', 'app_data'];
       const transaction = db.transaction(storesToClear, 'readwrite');
       for (const storeName of storesToClear) {
         try {
@@ -431,7 +425,6 @@
         }
       }
       await new Promise(resolve => transaction.oncomplete = resolve);
-      await setAppData('activeDeckId', null);
       activeDeckId = null;
       activeDeckNameEl.textContent = 'None';
       words = [];
@@ -505,7 +498,6 @@
         request.onerror = () => reject(request.error);
       });
     }
-    // Czekanie na gotowość DB (do wywołań przed init zakończonym)
     function waitForDB() {
       return new Promise((resolve) => {
         if (db) return resolve();
@@ -521,6 +513,63 @@
     const getToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
     const addDays = (date, days) => { const r = new Date(date); r.setDate(r.getDate() + days); return r; };
     const formatDate = (date) => date.toLocaleDateString('en-GB');
+    function toDateStr(d) { const x = new Date(d || new Date()); x.setHours(0,0,0,0); return x.toISOString().split('T')[0]; }
+
+    // --- CLOUD HELPERS ---
+    async function detectDeckOrigin(deckId) {
+      try {
+        if (!deckId) return false;
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return false;
+        const { data, error } = await supabaseClient
+          .from('decks')
+          .select('id')
+          .eq('id', deckId)
+          .single();
+        return !error && !!data?.id;
+      } catch { return false; }
+    }
+
+    async function refreshDeckCache(deckId) {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user || !deckId) return;
+
+      const { data: rows, error } = await supabaseClient
+        .from('words')
+        .select('id, english, polish, example_en, example_pl, image, created_at')
+        .eq('deck_id', deckId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('refreshDeckCache error:', error);
+        return;
+      }
+
+      const tx = db.transaction('words', 'readwrite');
+      const store = tx.objectStore('words');
+      const index = store.index('deckId');
+      const keys = await idbRequest(index.getAllKeys(deckId));
+      for (const k of keys) await idbRequest(store.delete(k));
+
+      for (const r of (rows || [])) {
+        await idbRequest(store.put({
+          id: r.id,
+          deckId,
+          english: r.english,
+          polish: r.polish,
+          example_en: r.example_en || '',
+          example_pl: r.example_pl || '',
+          image: r.image || null,
+          interval: 0,
+          nextReview: getToday().toISOString(),
+          easeFactor: 2.5,
+          isLearning: false,
+          learnedDate: null,
+          successCount: 0
+        }));
+      }
+      await new Promise(res => tx.oncomplete = res);
+    }
 
     // --- DOM ELEMENTS ---
     const loadingState = document.getElementById('loading-state');
@@ -622,8 +671,8 @@
     let currentTestQuestionIndex = 0;
     let testScore = 0;
     let sessionWordCounter = 0;
-    let sessionCompleted = false; // flaga do kontroli stanu sesji (koniec/przerwa)
-    let testDirection = 'en2pl'; // en2pl | pl2en
+    let sessionCompleted = false;
+    let testDirection = 'en2pl';
     let deckDetailsCurrentId = null;
 
     // --- Active deck helpers ---
@@ -684,7 +733,7 @@
       }
     }
 
-    // --- SPEECH SYNTHESIS (z fallbackiem) ---
+    // --- SPEECH ---
     function nativeSpeak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEndCallback) {
       if (!text) { if (onEndCallback) onEndCallback(); return; }
       if (!('speechSynthesis' in window)) { if (onEndCallback) onEndCallback(); return; }
@@ -721,7 +770,7 @@
       }
     }
 
-    // --- DATA MANAGEMENT (APP DATA) ---
+    // --- APP DATA (IndexedDB) ---
     async function getAppData(key) {
       const store = getTransaction('app_data');
       const result = await idbRequest(store.get(key));
@@ -736,18 +785,16 @@
       await waitForDB();
       deckDetailsView.classList.remove('hidden');
       deckDetailsName.textContent = deck.name;
-      deckDetailsCurrentId = deck.id; // zapamiętujemy ID przeglądanej talii
+      deckDetailsCurrentId = deck.id;
 
-      // Badge źródła: Prywatna / Cloud
-      if (deckDetailsSourceBadge) {
-        const isCloud = deck.source === 'cloud';
-        deckDetailsSourceBadge.textContent = isCloud ? 'Cloud' : 'Prywatna';
-        deckDetailsSourceBadge.classList.remove('bg-violet-100','text-violet-700','bg-slate-200','text-slate-700');
-        if (isCloud) {
-          deckDetailsSourceBadge.classList.add('bg-violet-100','text-violet-700');
-        } else {
-          deckDetailsSourceBadge.classList.add('bg-slate-200','text-slate-700');
-        }
+      deckDetailsSourceBadge.textContent = 'Cloud';
+      deckDetailsSourceBadge.classList.remove('bg-slate-200','text-slate-700');
+      deckDetailsSourceBadge.classList.add('bg-violet-100','text-violet-700');
+
+      // Dociągnij słowa tej talii do cache (liczniki/preview)
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        await refreshDeckCache(deck.id);
       }
 
       const wordStore = getTransaction('words');
@@ -758,46 +805,77 @@
         : '<p class="text-slate-500 text-sm">No words in this deck.</p>';
     }
 
-    // --- WORD MANAGEMENT & SRS LOGIC ---
+    // --- WORDS & SRS ---
     async function loadWordsForActiveDeck() {
-      if (activeDeckId) {
-        const wordStore = getTransaction('words');
-        const index = wordStore.index('deckId');
-        words = await idbRequest(index.getAll(activeDeckId));
-      } else {
+      await waitForDB();
+      words = [];
+      if (!activeDeckId) return;
+
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      const deckIsCloud = user ? await detectDeckOrigin(activeDeckId) : false;
+
+      if (!user || !deckIsCloud) {
         words = [];
+        loadingState.innerHTML = '<p class="text-center text-slate-500 p-8">Zaloguj się i wybierz talię z chmury.</p>';
+        loadingState.classList.remove('hidden');
+        learningState.classList.add('hidden');
+        return;
       }
 
-      const { data } = await supabaseClient.auth.getUser();
-      const user = data?.user;
-      if (user && words.length > 0) {
-        try {
-          const { data: progressRecords, error } = await supabaseClient
-            .from('user_word_progress')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('deck_id', activeDeckId);
-          if (error) {
-            console.error('Error fetching user progress:', error);
-          } else if (progressRecords) {
-            const progressMap = new Map(progressRecords.map(p => [p.word_english, p]));
-            words.forEach(word => {
-              if (progressMap.has(word.english)) {
-                const progress = progressMap.get(word.english);
-                word.interval = progress.interval;
-                word.easeFactor = progress.ease_factor;
-                word.nextReview = progress.next_review;
-                word.learnedDate = progress.learned_date || word.learnedDate || null;
-              }
-            });
-            console.log(`Merged ${progressMap.size} progress records from cloud.`);
-          }
-        } catch (e) {
-          console.error('Network or other error fetching progress:', e);
-        }
+      const { data: rows, error } = await supabaseClient
+        .from('words')
+        .select(`
+          id,
+          english,
+          polish,
+          example_en,
+          example_pl,
+          image,
+          created_at,
+          user_word_progress (
+            interval,
+            ease_factor,
+            next_review,
+            learned_date,
+            success_count
+          )
+        `)
+        .eq('deck_id', activeDeckId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Load cloud words error:', error);
       }
 
-      // Normalizacja successCount (dla starszych rekordów)
+      words = (rows || []).map(r => {
+        const p = Array.isArray(r.user_word_progress) ? r.user_word_progress[0] : null;
+        return {
+          id: r.id,
+          deckId: activeDeckId,
+          english: r.english,
+          polish: r.polish,
+          example_en: r.example_en || '',
+          example_pl: r.example_pl || '',
+          image: r.image || null,
+          interval: p?.interval ?? 0,
+          easeFactor: p?.ease_factor ?? 2.5,
+          nextReview: p?.next_review ? new Date(p.next_review).toISOString() : getToday().toISOString(),
+          learnedDate: p?.learned_date ? new Date(p.learned_date).toISOString() : null,
+          isLearning: false,
+          successCount: (typeof p?.success_count === 'number') ? p.success_count : (p?.learned_date ? 3 : 0)
+        };
+      });
+
+      // Mirror aktywnej talii do cache
+      const tx = db.transaction('words', 'readwrite');
+      const store = tx.objectStore('words');
+      const index = store.index('deckId');
+      const existingKeys = await idbRequest(index.getAllKeys(activeDeckId));
+      for (const k of existingKeys) await idbRequest(store.delete(k));
+      for (const w of words) await idbRequest(store.put(w));
+      await new Promise(res => tx.oncomplete = res);
+
+      // Normalizacja successCount
       const toUpdate = [];
       for (const w of words) {
         if (typeof w.successCount !== 'number') {
@@ -806,10 +884,10 @@
         }
       }
       if (toUpdate.length > 0) {
-        const tx = db.transaction('words', 'readwrite');
-        const store = tx.objectStore('words');
-        toUpdate.forEach(w => store.put(w));
-        await new Promise(res => tx.oncomplete = res);
+        const tx2 = db.transaction('words', 'readwrite');
+        const store2 = tx2.objectStore('words');
+        toUpdate.forEach(w => store2.put(w));
+        await new Promise(res => tx2.oncomplete = res);
       }
     }
 
@@ -836,16 +914,18 @@
       if (user) {
         const progressData = {
           user_id: user.id,
-          word_id: currentCard.id, // Używamy word_id
-          interval: currentCard.interval,
-          ease_factor: currentCard.easeFactor,
-          next_review: currentCard.nextReview,
-          learned_date: currentCard.learnedDate || null
+          word_id: currentCard.id,
+          deck_id: activeDeckId,
+          interval: currentCard.interval ?? 0,
+          ease_factor: currentCard.easeFactor ?? 2.5,
+          next_review: toDateStr(currentCard.nextReview || new Date()),
+          learned_date: currentCard.learnedDate ? toDateStr(currentCard.learnedDate) : null,
+          success_count: currentCard.successCount ?? 0
         };
         try {
           const { error } = await supabaseClient
             .from('user_word_progress')
-            .upsert(progressData, { onConflict: 'user_id, word_id' }); // Poprawiony onConflict
+            .upsert(progressData, { onConflict: 'user_id,word_id' });
           if (error) {
             console.error('Error saving progress to Supabase:', error);
           }
@@ -869,14 +949,12 @@
     }
     function buildQueues(reviewWords = null) {
       if (reviewWords) {
-        // Pracujemy na kopii, żeby nie aliasować `words` (Start again)
         newQueue = [];
         reviewQueue = [...reviewWords].sort(() => Math.random() - 0.5);
       } else {
         const today = getToday();
         const unlearnedWords = words.filter(w => !w.isLearning && w.interval === 0);
         const dueForReview = words.filter(w => w.interval > 0 && (REVIEW_IGNORE_DATE || new Date(w.nextReview) <= today));
-        // Brak limitu dziennego na nowe słowa
         newQueue = unlearnedWords.slice(0, DAILY_NEW_LIMIT);
         reviewQueue = dueForReview.sort(() => Math.random() - 0.5);
       }
@@ -955,7 +1033,7 @@
 
       if (!activeDeckId) {
         learningState.classList.add('hidden');
-        loadingState.innerHTML = '<p class="text-center text-slate-500 p-8">Select or create a deck to start learning.</p>';
+        loadingState.innerHTML = '<p class="text-center text-slate-500 p-8">Zaloguj się lub utwórz talię w chmurze, aby rozpocząć.</p>';
         loadingState.classList.remove('hidden');
         return;
       }
@@ -970,7 +1048,7 @@
       }
     }
 
-    // --- MODAL LOGIC & EVENT LISTENERS ---
+    // --- MODALS ---
     function openModal(modal) {
       modal.classList.remove('pointer-events-none', 'opacity-0');
       modal.querySelector('.modal-content').classList.remove('scale-95');
@@ -1074,71 +1152,82 @@
       openModal(addWordModal);
     });
 
+    // Tworzenie talii tylko w chmurze
     addDeckForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       await waitForDB();
+
       const deckNameInput = document.getElementById('new-deck-name');
       const deckName = deckNameInput.value.trim();
       if (!deckName) return;
 
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) { alert('Zaloguj się, aby tworzyć talie.'); openModal(authModal); return; }
+
       try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (user) {
-          const { data, error } = await supabaseClient
-            .from('decks')
-            .insert({ name: deckName, user_id: user.id })
-            .select('id, name')
-            .single();
-          if (error) throw error;
-          await ensureLocalDeckRecord(data.id, data.name);
-        } else {
-          const store = getTransaction('decks', 'readwrite');
-          await idbRequest(store.add({ name: deckName }));
-        }
+        const { data, error } = await supabaseClient
+          .from('decks')
+          .insert({ name: deckName, user_id: user.id })
+          .select('id, name')
+          .single();
+        if (error) throw error;
+
+        await ensureLocalDeckRecord(data.id, data.name);
         deckNameInput.value = '';
         await renderDecksList();
-      } catch (error) {
-        console.error(error);
+        await setActiveDeck(data.id, data.name);
+      } catch (err) {
+        console.error(err);
         alert('Nie udało się dodać talii.');
       }
     });
 
+    // Dodawanie słów (modal) — Cloud-only
     addWordForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       await waitForDB();
+
       const bulkInput = document.getElementById('bulk-words-input');
-      const text = bulkInput.value.trim();
+      const text = (bulkInput.value || '').trim();
       const targetDeckId = deckDetailsCurrentId;
       if (!text || !targetDeckId) {
-        alert("Error: No target deck selected for adding words.");
+        alert("Wybierz talię i wklej słowa.");
         return;
       }
+
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) { alert('Zaloguj się, aby zapisać słowa.'); openModal(authModal); return; }
+
+      const deckIsCloud = await detectDeckOrigin(targetDeckId);
+      if (!deckIsCloud) { alert('Ta talia nie jest w chmurze. Przenieś ją do chmury.'); return; }
+
       const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      const newWords = [];
+      const payload = [];
       for (const line of lines) {
         const parts = line.split(';').map(p => p.trim());
         if (parts.length !== 2 && parts.length !== 4) {
-          alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" albo "ang;pl;przykład_en;przykład_pl".`);
+          alert(`Nieprawidłowy format: "${line}". Użyj "ang;pl" lub "ang;pl;przykład_en;przykład_pl".`);
           return;
         }
         const [english, polish, example_en = '', example_pl = ''] = parts;
-        newWords.push({
-          deckId: targetDeckId, english, polish, example_en, example_pl,
-          interval: 0, nextReview: getToday().toISOString(), easeFactor: 2.5,
-          isLearning: false, learnedDate: null, image: null, successCount: 0
+        payload.push({
+          user_id: user.id,
+          deck_id: targetDeckId,
+          english, polish,
+          example_en: example_en || null,
+          example_pl: example_pl || null,
+          image: null
         });
       }
-      if (newWords.length > 0) {
-        const transaction = db.transaction('words', 'readwrite');
-        const store = transaction.objectStore('words');
-        newWords.forEach(word => store.add(word));
-        await new Promise(res => transaction.oncomplete = res);
-        bulkInput.value = '';
-        closeModal(addWordModal);
-        await loadWordsForActiveDeck();
-        startSession();
-        alert(`${newWords.length} words have been added!`);
-      }
+
+      const { error } = await supabaseClient.from('words').insert(payload);
+      if (error) { console.error(error); alert('Nie udało się dodać słów do chmury.'); return; }
+
+      bulkInput.value = '';
+      closeModal(addWordModal);
+      await loadWordsForActiveDeck();
+      startSession();
+      alert(`${payload.length} słów dodano do chmury.`);
     });
 
     showAnswerBtn.addEventListener('click', () => {
@@ -1162,11 +1251,10 @@
       if (currentCard) speak(currentCard.example_en, ENGLISH_ACCENT, 1.0);
     });
 
-    // Start again / Keep going logika (Start again na kopii `words`)
     startNewSessionEarlyBtn.addEventListener('click', () => {
       if (sessionCompleted) {
         summaryState.classList.add('hidden');
-        startSession([...words]); // kluczowe: użycie kopii
+        startSession([...words]);
       } else {
         summaryState.classList.add('hidden');
         learningState.classList.remove('hidden');
@@ -1185,22 +1273,23 @@
       }
     });
 
-    // Review/Test przyciski – z kierunkiem testu
+    // Review/Test
     document.querySelectorAll('.review-btn-learn, .review-btn-test').forEach(btn => {
       btn.addEventListener('click', async () => {
         await waitForDB();
         const type = btn.dataset.type;
         const count = btn.dataset.count ? parseInt(btn.dataset.count, 10) : null;
-        const allLearnedWords = (await idbRequest(getTransaction('words').getAll())).filter(w => (w.successCount || 0) >= 3);
+        const allWords = await idbRequest(getTransaction('words').getAll());
+        const learnedLocal = allWords.filter(w => (w.successCount || 0) >= 3);
 
         let wordsToReview = [];
         if (type === 'last' && count) {
-          wordsToReview = allLearnedWords
+          wordsToReview = learnedLocal
             .sort((a,b) => new Date(b.learnedDate || 0) - new Date(a.learnedDate || 0))
             .slice(0, count);
         } else if (type === 'today') {
           const todayStr = formatDate(getToday());
-          wordsToReview = allLearnedWords
+          wordsToReview = learnedLocal
             .filter(w => w.learnedDate && formatDate(new Date(w.learnedDate)) === todayStr);
         }
 
@@ -1243,10 +1332,8 @@
       const answersEl = document.getElementById('test-answers');
       answersEl.innerHTML = '';
 
-      // Pytanie zależnie od kierunku
       document.getElementById('test-question').textContent = (testDirection === 'pl2en') ? currentWord.polish : currentWord.english;
 
-      // Opcje odpowiedzi – mieszamy
       const otherWords = words.filter(w => w.id !== currentWord.id);
       let options = [currentWord];
       while (options.length < 4 && otherWords.length > 0) {
@@ -1294,7 +1381,7 @@
     }
     document.getElementById('back-to-main-menu-btn').addEventListener('click', startSession);
 
-    // --- STORY & FILE UPLOAD LOGIC ---
+    // --- STORIES & FILE UPLOAD (bez zmian istotnych dla Cloud-only) ---
     let storySentences = [];
     let currentSentenceIndex = 0;
     let isStoryPlaying = false;
@@ -1464,7 +1551,7 @@
       storySpeechRate = parseFloat(e.target.value);
     });
 
-    // --- AUTHENTICATION LOGIC (SUPABASE) ---
+    // --- AUTH ---
     showAuthBtn.addEventListener('click', async () => {
       const { data } = await supabaseClient.auth.getSession();
       const session = data?.session;
@@ -1563,7 +1650,7 @@
       else alert('Password reset email sent. Check your inbox.');
     });
 
-    // Wylogowanie
+    // Wylogowanie — czyścimy cache i sesję
     logoutBtn.addEventListener('click', async () => {
       await clearLocalUserData();
       const { error } = await supabaseClient.auth.signOut();
@@ -1579,16 +1666,20 @@
       if (isLoggedIn) {
         userInfo.classList.remove('hidden');
         userEmailDisplay.textContent = session.user.email;
-        if (appInitDone) {
-          await renderDecksList();
-        } else {
-          window.addEventListener('app:init-done', () => { renderDecksList(); }, { once: true });
+
+        const { data, error } = await supabaseClient
+          .from('decks')
+          .select('id, name')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          const chosen = data.find(d => d.id === activeDeckId) || data[0];
+          await setActiveDeck(chosen.id, chosen.name);
         }
+        await renderDecksList();
       } else {
         userInfo.classList.add('hidden');
-        if (appInitDone) {
-          await clearLocalUserData();
-        }
         decksListEl.innerHTML = '<p class="text-center text-slate-500 p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
       }
       console.log('Auth event:', event, 'user:', session?.user?.email || 'none');
@@ -1596,36 +1687,25 @@
 
     await handleAuthRedirectFromEmail();
 
-    // --- DECKS (local + cloud unified) ---
-    async function getLocalDecks() {
-      const decks = await idbRequest(getTransaction('decks').getAll());
-      return (decks || []).map(d => ({ id: d.id, name: d.name, source: 'local' }));
-    }
+    // --- DECKS (cloud-only) ---
     async function getUnifiedDecks() {
-      const { data } = await supabaseClient.auth.getUser();
-      const user = data?.user;
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabaseClient
+        .from('decks')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
 
-      let cloudDecks = [];
-      if (user) {
-        const { data, error } = await supabaseClient
-          .from('decks')
-          .select('id, name')
-          .eq('user_id', user.id)
-          .order('name', { ascending: true });
-        if (!error && Array.isArray(data)) {
-          cloudDecks = data.map(d => ({ id: d.id, name: d.name, source: 'cloud' }));
-          for (const d of data) {
-            try { await ensureLocalDeckRecord(d.id, d.name); } catch (_) {}
-          }
-        }
+      if (error) {
+        console.error('Load decks error:', error);
+        return [];
       }
 
-      const localDecks = await getLocalDecks();
-      const merged = [
-        ...cloudDecks,
-        ...localDecks.filter(ld => !cloudDecks.some(cd => cd.id === ld.id))
-      ];
-      return merged;
+      for (const d of data) {
+        try { await ensureLocalDeckRecord(d.id, d.name); } catch (_) {}
+      }
+      return data.map(d => ({ id: d.id, name: d.name, source: 'cloud' }));
     }
 
     async function renameDeck(deckId, oldName) {
@@ -1713,7 +1793,7 @@
         const count = wordsInDeck.length;
         const mastered = wordsInDeck.filter(w => (w.successCount || 0) >= 3).length;
         const isActive = deck.id === activeDeckId;
-        const isCloud = deck.source === 'cloud';
+        const isCloud = true;
 
         const deckEl = document.createElement('div');
         deckEl.className = `p-3 border-b border-slate-100 ${isActive ? 'bg-sky-50' : ''}`;
@@ -1722,7 +1802,7 @@
             <div class="flex-grow min-w-0 pr-4">
               <p class="font-bold truncate ${isActive ? 'text-sky-600' : ''}">
                 ${deck.name}
-                <span class="ml-2 align-middle text-xs px-2 py-0.5 rounded-full ${isCloud ? 'bg-violet-100 text-violet-700' : 'bg-slate-200 text-slate-700'}">${isCloud ? 'Cloud' : 'Prywatna'}</span>
+                <span class="ml-2 align-middle text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Cloud</span>
               </p>
               <p class="text-sm text-slate-500">${count} słówek • <span class="text-green-600 font-semibold">${mastered}</span> nauczonych</p>
             </div>
@@ -1771,7 +1851,7 @@
           deleteDeck(deck.id, deck.name);
         });
 
-        // Dodawanie słów inline
+        // Dodawanie słów inline (Cloud-only)
         const addInlineContainer = deckEl.querySelector('.add-inline-container');
         const toggleAddBtn = deckEl.querySelector('.toggle-add-inline-btn');
         const inlineSaveBtn = deckEl.querySelector('.inline-save-words-btn');
@@ -1790,12 +1870,10 @@
         });
         inlineSaveBtn.addEventListener('click', async () => {
           const text = (inlineTextarea.value || '').trim();
-          if (!text) {
-            alert('Wklej najpierw słowa.');
-            return;
-          }
+          if (!text) { alert('Wklej najpierw słowa.'); return; }
+
           const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          const newWords = [];
+          const payload = [];
           for (const line of lines) {
             const parts = line.split(';').map(p => p.trim());
             if (parts.length !== 2 && parts.length !== 4) {
@@ -1803,28 +1881,48 @@
               return;
             }
             const [english, polish, example_en = '', example_pl = ''] = parts;
-            newWords.push({
-              deckId: deck.id, english, polish, example_en, example_pl,
-              interval: 0, nextReview: getToday().toISOString(), easeFactor: 2.5,
-              isLearning: false, learnedDate: null, image: null, successCount: 0
+            payload.push({
+              english,
+              polish,
+              example_en: example_en || null,
+              example_pl: example_pl || null
             });
           }
-          if (newWords.length > 0) {
-            const transaction = db.transaction('words', 'readwrite');
-            const store = transaction.objectStore('words');
-            newWords.forEach(word => store.add(word));
-            await new Promise(res => transaction.oncomplete = res);
 
-            inlineTextarea.value = '';
-            addInlineContainer.classList.add('hidden');
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          if (!user) { alert('Zaloguj się, aby dodać słowa do chmury.'); openModal(authModal); return; }
 
-            if (deck.id === activeDeckId) {
-              await loadWordsForActiveDeck();
-              startSession();
-            }
-            await renderDecksList();
-            alert(`${newWords.length} words have been added to "${deck.name}"!`);
+          const rowsToInsert = payload.map(w => ({
+            user_id: user.id,
+            deck_id: deck.id,
+            english: w.english,
+            polish: w.polish,
+            example_en: w.example_en,
+            example_pl: w.example_pl,
+            image: null
+          }));
+
+          const { error } = await supabaseClient.from('words').insert(rowsToInsert);
+          if (error) {
+            console.error('Insert words error:', error);
+            alert('Nie udało się zapisać słów w chmurze.');
+            return;
           }
+
+          inlineTextarea.value = '';
+          addInlineContainer.classList.add('hidden');
+
+          if (deck.id === activeDeckId) {
+            await loadWordsForActiveDeck();   // mirror aktywnej talii + odświeżenie UI
+            startSession();
+          } else {
+            await refreshDeckCache(deck.id);  // mirror tylko tej talii (dla liczników)
+          }
+
+          if (!decksModal.classList.contains('opacity-0')) {
+            await renderDecksList();
+          }
+          alert(`${rowsToInsert.length} słów dodano do "${deck.name}".`);
         });
 
         decksListEl.appendChild(deckEl);
@@ -1845,42 +1943,6 @@
         await new Promise(res => storyTx.oncomplete = res);
       }
 
-      const decksStore = getTransaction('decks');
-      const decks = await idbRequest(decksStore.getAll());
-      let currentDeckId;
-
-      if (decks.length === 0) {
-        const transaction = db.transaction(['decks', 'words'], 'readwrite');
-        const deckStore = transaction.objectStore('decks');
-        const wordStore = transaction.objectStore('words');
-        const addRequest = deckStore.add({ name: 'English Starter Deck' });
-        currentDeckId = await idbRequest(addRequest);
-
-        const wordPromises = initialWordList.map(word => {
-          const wordData = {
-            ...word,
-            deckId: currentDeckId,
-            interval: 0,
-            nextReview: getToday().toISOString(),
-            easeFactor: 2.5,
-            isLearning: false,
-            learnedDate: null,
-            image: null,
-            successCount: 0
-          };
-          delete wordData.id;
-          return idbRequest(wordStore.add(wordData));
-        });
-        await Promise.all(wordPromises);
-        await new Promise(res => transaction.oncomplete = res);
-      } else {
-        currentDeckId = await getAppData('activeDeckId');
-        const deckExists = decks.some(d => d.id === currentDeckId);
-        if (!currentDeckId || !deckExists) {
-          currentDeckId = decks[0].id;
-        }
-      }
-
       if (!isReset) {
         const savedHeader = await getAppData('headerImage');
         if (savedHeader) headerImageEl.src = savedHeader;
@@ -1892,8 +1954,38 @@
         }
       }
 
-      loadingState.classList.add('hidden');
-      await setActiveDeck(currentDeckId);
+      // Po starcie: jeśli zalogowany, wczytaj talie; jeśli nie — CTA logowania
+      const { data: { session } } = await supabaseClient.auth.getSession();
+
+      if (session && session.user) {
+        const { data, error } = await supabaseClient
+          .from('decks')
+          .select('id, name')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          await setActiveDeck(data[0].id, data[0].name);
+        } else {
+          // brak talii – można utworzyć pierwszą automatycznie
+          const { data: created, error: createErr } = await supabaseClient
+            .from('decks')
+            .insert({ name: 'My Deck', user_id: session.user.id })
+            .select('id, name')
+            .single();
+          if (!createErr) {
+            await ensureLocalDeckRecord(created.id, created.name);
+            await setActiveDeck(created.id, created.name);
+          }
+        }
+      } else {
+        loadingState.classList.add('hidden');
+        learningState.classList.add('hidden');
+        document.getElementById('main-content').insertAdjacentHTML('afterbegin',
+          '<div class="text-center p-6 text-slate-500">Zaloguj się, aby rozpocząć naukę i zapisać dane w chmurze.</div>'
+        );
+      }
+
       appInitDone = true;
       window.dispatchEvent(new Event('app:init-done'));
     }
