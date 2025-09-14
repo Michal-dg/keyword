@@ -96,7 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- KONFIGURACJA SUPABASE ---
     const SUPABASE_URL = 'https://elneujplpdoruvrvzvzd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmV1anBscGRvcnV2cnZ6dnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDQ3NjYsImV4cCI6MjA3MjM4MDc2Nn0.YIJYmt8KeiXH0iFS_Pk6ErIkyKZpPDsi29G83VItjCc';
-    const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // POPRAWKA: Używamy nowej nazwy 'supabaseClient', aby uniknąć konfliktu nazw.
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // --- ELEMENTY DOM ---
     const userDisplay = document.getElementById('user-display');
@@ -142,7 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderDecks = async () => {
         if (!currentUser) return;
         
-        const { data: decks, error } = await supabase
+        // POPRAWKA: Używamy supabaseClient
+        const { data: decks, error } = await supabaseClient
             .from('decks')
             .select('id, name')
             .eq('user_id', currentUser.id)
@@ -175,7 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const deckName = newDeckNameInput.value.trim();
         if (!deckName || !currentUser) return;
 
-        const { error } = await supabase
+        // POPRAWKA: Używamy supabaseClient
+        const { error } = await supabaseClient
             .from('decks')
             .insert({ name: deckName, user_id: currentUser.id });
 
@@ -201,7 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderWords = async (deckId) => {
         if (!deckId) return;
 
-        const { data: words, error } = await supabase
+        // POPRAWKA: Używamy supabaseClient
+        const { data: words, error } = await supabaseClient
             .from('words')
             .select('english, polish')
             .eq('deck_id', deckId)
@@ -247,7 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const { error } = await supabase.from('words').insert(wordsPayload);
+        // POPRAWKA: Używamy supabaseClient
+        const { error } = await supabaseClient.from('words').insert(wordsPayload);
 
         if (error) {
             alert('Nie udało się dodać słówek: ' + error.message);
@@ -264,9 +269,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             userDisplay.textContent = `Zalogowano jako: ${user.email}`;
             logoutContainer.classList.remove('hidden');
-            loginBtn.parentElement.classList.add('hidden'); // Ukryj przyciski logowania/rejestracji
-            authForm.querySelectorAll('input').forEach(i => i.style.display = 'none'); // Ukryj pola input
-            authForm.querySelectorAll('label').forEach(l => l.style.display = 'none'); // Ukryj etykiety
+            loginBtn.parentElement.classList.add('hidden');
+            authForm.querySelectorAll('input').forEach(i => i.style.display = 'none');
+            authForm.querySelectorAll('label').forEach(l => l.style.display = 'none');
             
             showView(decksView);
             renderDecks();
@@ -286,7 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
         authErrorMessage.classList.add('hidden');
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-password').value;
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        // POPRAWKA: Używamy supabaseClient
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
             authErrorMessage.textContent = error.message;
             authErrorMessage.classList.remove('hidden');
@@ -299,7 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
         authErrorMessage.classList.add('hidden');
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-password').value;
-        const { error } = await supabase.auth.signUp({ email, password });
+        // POPRAWKA: Używamy supabaseClient
+        const { error } = await supabaseClient.auth.signUp({ email, password });
         if (error) {
             authErrorMessage.textContent = error.message;
             authErrorMessage.classList.remove('hidden');
@@ -310,11 +317,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     logoutBtn.addEventListener('click', async () => {
-        await supabase.auth.signOut();
+        // POPRAWKA: Używamy supabaseClient
+        await supabaseClient.auth.signOut();
         closeModal(authModal);
     });
 
-    supabase.auth.onAuthStateChange((event, session) => {
+    // POPRAWKA: Używamy supabaseClient
+    supabaseClient.auth.onAuthStateChange((event, session) => {
         const user = session?.user || null;
         updateUIForAuthState(user);
     });
