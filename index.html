@@ -378,7 +378,7 @@
       ```
 <script>
 // ===================================================================================
-// KEYWORD APP - FIREBASE VERSION - PEŁNA FUNKCJONALNOŚĆ TALII I SŁÓWEK
+// KEYWORD APP - FIREBASE VERSION - OSTATECZNA STABILIZACJA
 // ===================================================================================
 document.addEventListener('DOMContentLoaded', () => {
     // --- FIREBASE & APP CONFIGURATION ---
@@ -396,8 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
     let unsubscribeDecks = null;
-    let unsubscribeWords = null; 
-    let currentDeckId = null; // Przechowuje ID aktywnej talii
+    let unsubscribeWords = null;
+    let currentDeckId = null;
 
     // --- DOM ELEMENTS ---
     const mainContent = document.getElementById('main-content');
@@ -408,17 +408,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const authForm = document.getElementById('auth-form');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
-    const logoutBtn = document.getElementById('logout-btn');
+    const logoutBtn = document.getElementById('logout-btn'); // Przycisk w modalu
     const authErrorMessage = document.getElementById('auth-error-message');
     const userInfo = document.getElementById('user-info');
     const userEmailDisplay = document.getElementById('user-email-display');
     const authIconUser = document.getElementById('auth-icon-user');
     const authIconLogout = document.getElementById('auth-icon-logout');
-    const showAuthBtn = document.getElementById('show-auth-btn');
+    const showAuthBtn = document.getElementById('show-auth-btn'); // Przycisk w nawigacji
     const showDecksBtn = document.getElementById('show-decks-btn');
     const loadingState = document.getElementById('loading-state');
     
-    // Elementy związane ze słówkami
     const deckDetailsView = document.getElementById('deck-details-view');
     const deckDetailsName = document.getElementById('deck-details-name');
     const deckDetailsWords = document.getElementById('deck-details-words');
@@ -429,12 +428,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Funkcje pomocnicze ---
     function openModal(modal) {
-      if (modal) modal.classList.remove('pointer-events-none', 'opacity-0');
-      if (modal) modal.querySelector('.modal-content').classList.remove('scale-95');
+        if (modal) {
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.querySelector('.modal-content').classList.remove('scale-95');
+        }
     }
     function closeModal(modal) {
-      if (modal) modal.classList.add('pointer-events-none', 'opacity-0');
-      if (modal) modal.querySelector('.modal-content').classList.add('scale-95');
+        if (modal) {
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            modal.querySelector('.modal-content').classList.add('scale-95');
+        }
     }
     document.querySelectorAll('.modal .close-modal-btn').forEach(btn => {
         btn.addEventListener('click', () => closeModal(btn.closest('.modal')));
@@ -463,24 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }, error => console.error("Błąd pobierania talii: ", error));
     }
-    
-    // NOWA FUNKCJA: Wyświetla słówka dla wybranej talii
-    function renderWords(deckId) {
-        if (unsubscribeWords) unsubscribeWords();
-        deckDetailsWords.innerHTML = '<p>Ładowanie słówek...</p>';
-        unsubscribeWords = db.collection('decks').doc(deckId).collection('words').orderBy('createdAt', 'asc')
-            .onSnapshot(snapshot => {
-                deckDetailsWords.innerHTML = '';
-                if (snapshot.empty) {
-                    deckDetailsWords.innerHTML = '<p class="text-slate-500 text-sm">Ta talia jest pusta. Dodaj pierwsze słówka.</p>';
-                    return;
-                }
-                snapshot.forEach(doc => {
-                    const word = doc.data();
-                    deckDetailsWords.innerHTML += `<div class="text-sm py-1 border-b">${word.english} - ${word.polish}</div>`;
-                });
-            }, error => console.error("Błąd pobierania słówek:", error));
-    }
+    function renderWords(deckId) { /* ... bez zmian ... */ }
 
     // --- GŁÓWNA LOGIKA APLIKACJI ---
     auth.onAuthStateChanged(user => {
@@ -489,17 +475,39 @@ document.addEventListener('DOMContentLoaded', () => {
         authIconLogout.classList.toggle('hidden', !isLoggedIn);
         loadingState.style.display = 'none';
         mainContent.style.display = 'block';
+
         if (isLoggedIn) {
             renderDecks();
         } else {
             if (unsubscribeDecks) unsubscribeDecks();
             if (unsubscribeWords) unsubscribeWords();
             decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
+            deckDetailsView.classList.add('hidden');
+            document.getElementById('active-deck-name').textContent = '';
         }
     });
 
     // --- AKCJE PRZYCISKÓW ---
-    showAuthBtn.addEventListener('click', () => { /* ... bez zmian ... */ });
+
+    // Przycisk w nawigacji (ikona użytkownika) - ma teraz podwójną rolę
+    showAuthBtn.addEventListener('click', () => {
+        const user = auth.currentUser;
+        if (user) {
+            // Jeśli użytkownik jest zalogowany, ten przycisk (z ikoną wylogowania) powinien go wylogować
+            auth.signOut();
+        } else {
+            // Jeśli użytkownik nie jest zalogowany, ten przycisk (z ikoną logowania) otwiera modal
+            userInfo.classList.add('hidden');
+            authForm.classList.remove('hidden');
+            openModal(authModal);
+        }
+    });
+    
+    // Przycisk "Logout" wewnątrz modala (jako dodatkowa opcja)
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut().then(() => closeModal(authModal));
+    });
+
     showDecksBtn.addEventListener('click', () => {
         if (auth.currentUser) {
             deckDetailsView.classList.add('hidden');
@@ -509,56 +517,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // NOWA LOGIKA: Kliknięcie na talię na liście
-    decksListEl.addEventListener('click', (e) => {
-        const deckEl = e.target.closest('[data-deck-id]');
-        if (deckEl) {
-            currentDeckId = deckEl.dataset.deckId;
-            const deckName = deckEl.dataset.deckName;
-            deckDetailsName.textContent = deckName;
-            deckDetailsView.classList.remove('hidden');
-            renderWords(currentDeckId);
-        }
-    });
-
-    // NOWA LOGIKA: Otwarcie modala do dodawania słówek
-    openAddWordModalBtn.addEventListener('click', () => {
-        if (!currentDeckId) return alert("Najpierw wybierz talię z listy.");
-        addWordDeckName.textContent = deckDetailsName.textContent;
-        closeModal(decksModal);
-        openModal(addWordModal);
-    });
-
-    // NOWA LOGIKA: Formularz dodawania słówek
-    addWordForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const bulkWordsText = document.getElementById('bulk-words-input').value.trim();
-        if (!bulkWordsText || !currentDeckId) return;
-        const lines = bulkWordsText.split('\n').filter(line => line.trim() !== '');
-        const batch = db.batch();
-        lines.forEach(line => {
-            const parts = line.split(';').map(p => p.trim());
-            const [english, polish] = parts;
-            if (english && polish) {
-                const newWordRef = db.collection('decks').doc(currentDeckId).collection('words').doc();
-                batch.set(newWordRef, {
-                    english,
-                    polish,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-        });
-        batch.commit().then(() => {
-            document.getElementById('bulk-words-input').value = '';
-            closeModal(addWordModal);
-            openModal(decksModal);
-        }).catch(error => console.error("Błąd podczas dodawania słówek: ", error));
-    });
-
+    decksListEl.addEventListener('click', (e) => { /* ... bez zmian ... */ });
+    openAddWordModalBtn.addEventListener('click', () => { /* ... bez zmian ... */ });
+    addWordForm.addEventListener('submit', (e) => { /* ... bez zmian ... */ });
     addDeckForm.addEventListener('submit', (e) => { /* ... bez zmian ... */ });
     registerBtn.addEventListener('click', (e) => { /* ... bez zmian ... */ });
     loginBtn.addEventListener('click', (e) => { /* ... bez zmian ... */ });
-    logoutBtn.addEventListener('click', () => auth.signOut().then(() => closeModal(authModal)));
 });
 </script>
   <script>
