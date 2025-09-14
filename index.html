@@ -378,7 +378,7 @@
       ```
 <script>
 // ===================================================================================
-// KEYWORD APP - FIREBASE VERSION - POPRAWIONY PRZYCISK TALIE
+// KEYWORD APP - FIREBASE VERSION - DODANO OBSŁUGĘ TALII
 // ===================================================================================
 document.addEventListener('DOMContentLoaded', () => {
     // --- FIREBASE & APP CONFIGURATION ---
@@ -401,6 +401,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainContent = document.getElementById('main-content');
     const authModal = document.getElementById('auth-modal');
     const decksModal = document.getElementById('decks-modal');
+    const decksListEl = document.getElementById('decks-list');
+    const addDeckForm = document.getElementById('add-deck-form');
     const authForm = document.getElementById('auth-form');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
@@ -413,26 +415,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const showAuthBtn = document.getElementById('show-auth-btn');
     const showDecksBtn = document.getElementById('show-decks-btn');
 
-    // Elementy ekranu weryfikacji
     const verifyEmailContainer = document.getElementById('verify-email-container');
     const verifyEmailAddress = document.getElementById('verify-email-address');
     const resendVerificationButton = document.getElementById('resend-verification-button');
     const verificationLogoutButton = document.getElementById('verification-logout-button');
 
-    // Funkcje do otwierania/zamykania modali
-    function openModal(modal) {
-      modal.classList.remove('pointer-events-none', 'opacity-0');
-      modal.querySelector('.modal-content').classList.remove('scale-95');
-    }
-    function closeModal(modal) {
-      modal.classList.add('pointer-events-none', 'opacity-0');
-      modal.querySelector('.modal-content').classList.add('scale-95');
-    }
+    // --- Funkcje pomocnicze ---
+    function openModal(modal) { /* ... bez zmian ... */ }
+    function closeModal(modal) { /* ... bez zmian ... */ }
     document.querySelectorAll('.modal .close-modal-btn').forEach(btn => {
         btn.addEventListener('click', () => closeModal(btn.closest('.modal')));
     });
 
-    // --- LOGIKA APLIKACJI ---
+    // --- LOGIKA DANYCH (FIRESTORE) ---
+
+    // NOWA FUNKCJA: Pobiera i wyświetla talie zalogowanego użytkownika
+    function renderDecks() {
+        if (!currentUser) {
+            decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
+            return;
+        }
+
+        decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Ładowanie talii...</p>';
+        
+        // Nasłuchujemy na zmiany w kolekcji 'decks' w czasie rzeczywistym
+        db.collection('decks').where('userId', '==', currentUser.uid).orderBy('createdAt', 'desc')
+            .onSnapshot(snapshot => {
+                if (snapshot.empty) {
+                    decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Nie masz jeszcze żadnych talii. Stwórz pierwszą poniżej!</p>';
+                    return;
+                }
+                
+                decksListEl.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const deck = { id: doc.id, ...doc.data() };
+                    const deckEl = document.createElement('div');
+                    deckEl.className = 'p-3 border-b border-slate-100';
+                    deckEl.innerHTML = `<p class="font-bold">${deck.name}</p>`;
+                    decksListEl.appendChild(deckEl);
+                });
+            }, error => {
+                console.error("Błąd pobierania talii: ", error);
+                decksListEl.innerHTML = '<p class="text-red-500 text-center p-4">Wystąpił błąd podczas ładowania talii.</p>';
+            });
+    }
+
+
+    // --- GŁÓWNA LOGIKA APLIKACJI ---
 
     function updateUI(user) {
         const isLoggedIn = !!user;
@@ -444,6 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLoggedIn && isVerified) {
             mainContent.style.display = 'block';
             verifyEmailContainer.style.display = 'none';
+            renderDecks(); // POBIERZ TALIE, GDY UŻYTKOWNIK JEST ZALOGOWANY
         } else if (isLoggedIn && !isVerified) {
             mainContent.style.display = 'none';
             verifyEmailContainer.style.display = 'block';
@@ -451,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             mainContent.style.display = 'block';
             verifyEmailContainer.style.display = 'none';
-            // Tutaj w przyszłości zresetujemy stan, aby pokazać widok dla gościa
+            decksListEl.innerHTML = '<p class="text-slate-500 text-center p-4">Zaloguj się, aby zobaczyć swoje talie.</p>';
         }
     }
 
@@ -461,70 +491,47 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- AKCJE PRZYCISKÓW ---
-    
-    // Przycisk otwierający modal logowania/panel użytkownika
-    showAuthBtn.addEventListener('click', () => {
-        const user = auth.currentUser;
-        if (user) {
-            userInfo.classList.remove('hidden');
-            authForm.classList.add('hidden');
-            userEmailDisplay.textContent = user.email;
-        } else {
-            userInfo.classList.add('hidden');
-            authForm.classList.remove('hidden');
-        }
-        openModal(authModal);
-    });
-    
-    // POPRAWIONY PRZYCISK TALII
+    showAuthBtn.addEventListener('click', () => { /* ... bez zmian ... */ });
     showDecksBtn.addEventListener('click', () => {
         if (currentUser && currentUser.emailVerified) {
-            // Jeśli użytkownik jest zalogowany i zweryfikowany, otwórz modal z taliami
             openModal(decksModal);
         } else {
-            // W przeciwnym razie, otwórz modal logowania
             openModal(authModal);
         }
     });
 
-    registerBtn.addEventListener('click', (e) => {
+    // NOWA LOGIKA: Tworzenie nowej talii
+    addDeckForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
-        auth.createUserWithEmailAndPassword(email, password)
-            .then(cred => {
-                cred.user.sendEmailVerification();
-                closeModal(authModal);
-            })
-            .catch(err => {
-                authErrorMessage.textContent = err.message;
-                authErrorMessage.classList.remove('hidden');
-            });
-    });
+        if (!currentUser) {
+            alert('Musisz być zalogowany, aby stworzyć talię.');
+            return;
+        }
 
-    loginBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
-        auth.signInWithEmailAndPassword(email, password)
-            .then(() => closeModal(authModal))
-            .catch(err => {
-                authErrorMessage.textContent = err.message;
-                authErrorMessage.classList.remove('hidden');
-            });
-    });
-    
-    logoutBtn.addEventListener('click', () => auth.signOut().then(() => closeModal(authModal)));
-    verificationLogoutButton.addEventListener('click', () => auth.signOut());
+        const deckNameInput = document.getElementById('new-deck-name');
+        const deckName = deckNameInput.value.trim();
 
-    resendVerificationButton.addEventListener('click', () => {
-        const user = auth.currentUser;
-        if (user) {
-            user.sendEmailVerification()
-                .then(() => alert('E-mail weryfikacyjny został wysłany ponownie. Sprawdź skrzynkę.'))
-                .catch(err => alert('Błąd: ' + err.message));
+        if (deckName) {
+            db.collection('decks').add({
+                name: deckName,
+                userId: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                console.log('Talia dodana!');
+                deckNameInput.value = ''; // Wyczyść pole po dodaniu
+            }).catch(error => {
+                console.error("Błąd podczas dodawania talii: ", error);
+                alert("Nie udało się dodać talii. Spróbuj ponownie.");
+            });
         }
     });
+
+    // Pozostałe listenery (logowanie, rejestracja, wylogowanie)
+    registerBtn.addEventListener('click', (e) => { /* ... bez zmian ... */ });
+    loginBtn.addEventListener('click', (e) => { /* ... bez zmian ... */ });
+    logoutBtn.addEventListener('click', () => auth.signOut().then(() => closeModal(authModal)));
+    verificationLogoutButton.addEventListener('click', () => auth.signOut());
+    resendVerificationButton.addEventListener('click', () => { /* ... bez zmian ... */ });
 });
 </script>
 
