@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    addDeckForm.addEventListener('submit', (e) => {
+   addDeckForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const user = auth.currentUser;
         if (!user) return alert('Musisz być zalogowany, aby stworzyć talię.');
@@ -518,18 +518,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const deckName = deckNameInput.value.trim();
 
         if (deckName) {
+            // Tymczasowo usuwamy problematyczną datę serwera, aby przetestować
             db.collection('decks').add({
                 name: deckName,
-                userId: user.uid,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                userId: user.uid
             }).then(() => {
+                console.log('Talia dodana pomyślnie!');
                 deckNameInput.value = '';
             }).catch(error => {
                 console.error("Błąd podczas dodawania talii: ", error);
+                alert("Wystąpił nieoczekiwany błąd. Sprawdź konsolę (F12).");
             });
         }
     });
-
     registerBtn.addEventListener('click', (e) => {
         e.preventDefault();
         const email = document.getElementById('auth-email').value.trim();
