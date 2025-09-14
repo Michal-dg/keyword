@@ -895,24 +895,42 @@ function nativeSpeak(text, lang = ENGLISH_ACCENT, rate = 1.0, onEnd) {
     });
 
     // --- WORDS SUBSCRIBE ---
-    async function subscribeWordsForActiveDeck() {
-      if (!activeDeckId) {
-        words = [];
-      } else {
-        if (unsubscribeWords) unsubscribeWords();
-        unsubscribeWords = db.collection('decks').doc(activeDeckId).collection('words')
-          .orderBy('createdAt', 'asc')
-          .onSnapshot(snap => {
-            words = snap.docs.map(d => ({
-              id: d.id,
-              ...d.data()
-            }));
-            startSession();
-          }, err => {
-            console.error('Words snapshot error:', err);
-          });
-      }
-    }
+   async function subscribeWordsForActiveDeck() {
+  if (!activeDeckId) {
+    words = [];
+    startSession();          // pokaż pusty ekran „Wybierz talię…”
+    return;
+  }
+
+  // wyłącz poprzedni listener (jeśli zmieniasz talię)
+  if (unsubscribeWords) unsubscribeWords();
+
+  let firstSnapshot = true;  // ← flaga: tylko pierwsze dane uruchomią sesję
+
+  unsubscribeWords = db
+    .collection('decks')
+    .doc(activeDeckId)
+    .collection('words')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(
+      snap => {
+        // aktualizuj lokalną tablicę
+        words = snap.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        }));
+
+        // uruchom tryb nauki tylko raz — przy pierwszym odebraniu danych
+        if (firstSnapshot) {
+          startSession();
+          firstSnapshot = false;
+        }
+        // przy kolejnych aktualizacjach NIE resetujemy sesji,
+        // dzięki czemu kolejka kart się nie zeruje
+      },
+      err => console.error('Words snapshot error:', err)
+    );
+}
 
     // --- LEARNING FLOW (SRS) ---
     function updateLearnedCount() {
