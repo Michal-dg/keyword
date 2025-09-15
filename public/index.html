@@ -17,7 +17,7 @@
 
   <!-- Czcionki + PWA -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="/assets/manifest-D4FDNF8k.json" />
   <meta name="theme-color" content="#0284c7" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -38,6 +38,7 @@
     #header-image-container:hover #upload-header-btn,
     .card-face-front:hover #upload-global-bg-btn { opacity:1; }
   </style>
+  <script type="module" crossorigin src="/assets/index-E64LnefS.js"></script>
 </head>
 
 <body class="bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen">
@@ -54,7 +55,7 @@
     <!-- ===== HEADER ===== -->
     <header class="text-center mb-4">
       <div id="header-image-container" class="relative w-full aspect-[3.5/1] bg-slate-200 rounded-lg mb-4 overflow-hidden group">
-        <img id="header-image" src="images/default-header.jpg" alt="Header" class="w-full h-full object-cover" />
+        <img id="header-image" src="/assets/default-header-CJueh5LQ.jpg" alt="Header" class="w-full h-full object-cover" />
         <button id="upload-header-btn" class="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <span class="ml-2">Change Photo</span>
@@ -126,7 +127,7 @@
           <div id="flashcard" class="card w-full h-[320px] sm:h-[350px] relative">
             <!-- front -->
             <div class="card-face card-face-front group flex flex-col items-center justify-center rounded-2xl shadow-lg p-6 text-center overflow-hidden">
-              <img id="card-front-bg" src="images/default-card-bg.jpg" class="absolute inset-0 w-full h-full object-cover" />
+              <img id="card-front-bg" src="/assets/default-card-bg-BCOgC-ad.jpg" class="absolute inset-0 w-full h-full object-cover" />
               <div id="card-front-overlay" class="absolute inset-0 bg-black/60 rounded-2xl"></div>
               <button id="upload-global-bg-btn" title="Change card background" class="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition opacity-0 group-hover:opacity-100">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -416,6 +417,5 @@
   </script>
 
   <!-- ===== ENTRY POINT ===== -->
-  <script type="module" src="/src/app.js"></script>
 </body>
 </html>

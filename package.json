@@ -1,15 +1,17 @@
 {
-  "name": "english-keyword-app",
+  "name": "english-keyword",
   "version": "1.0.0",
-  "description": "An app to learn English vocabulary.",
-  "main": "index.html",
+  "description": "Keyword: Master English — flashcard PWA",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "firebase emulators:start --only hosting"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@google-cloud/text-to-speech": "^5.3.0"
+    "firebase": "^9.22.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
   }
 }

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimalny Test Firebase</title>
+    <style>
+        body { font-family: sans-serif; padding: 2em; }
+        button { margin: 5px; }
+        #status { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Minimalny Test Firebase</h1>
+    <p>Status: <b id="status">Sprawdzanie...</b></p>
+    
+    <button id="registerBtn">Zarejestruj (prompt)</button>
+    <button id="loginBtn">Zaloguj (prompt)</button>
+    <button id="logoutBtn">Wyloguj</button>
+    <button id="decksBtn">Pokaż Talie</button>
+
+    <hr>
+    <h3>Talie:</h3>
+    <div id="decks-list"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // UPEWNIJ SIĘ, ŻE TO JEST TWÓJ POPRAWNY KLUCZ
+        const firebaseConfig = {
+          apiKey: "AIzaSyDI4cJBA8rw2DDav440fk-0erx3ZoG-41o",
+          authDomain: "englishapp-ff793.firebaseapp.com",
+          projectId: "englishapp-ff793",
+          storageBucket: "englishapp-ff793.appspot.com",
+          messagingSenderId: "851511819588",
+          appId: "1:851511819588:web:c91e67102c7338bba62b11",
+          measurementId: "G-9J5Q0E7ZR3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const statusEl = document.getElementById('status');
+        const decksListEl = document.getElementById('decks-list');
+
+        // Obserwator stanu zalogowania
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                statusEl.textContent = 'Zalogowano jako: ' + user.email;
+                console.log("onAuthStateChanged: Użytkownik zalogowany", user);
+            } else {
+                statusEl.textContent = 'Wylogowano';
+                decksListEl.innerHTML = '';
+                console.log("onAuthStateChanged: Użytkownik wylogowany");
+            }
+        });
+
+        // Rejestracja
+        document.getElementById('registerBtn').addEventListener('click', () => {
+            const email = prompt("Podaj e-mail do rejestracji:");
+            const password = prompt("Podaj hasło (min. 6 znaków):");
+            if (email && password) {
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then(cred => alert("Zarejestrowano i zalogowano: " + cred.user.email))
+                    .catch(err => alert("Błąd rejestracji: " + err.message));
+            }
+        });
+
+        // Logowanie
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const email = prompt("Podaj e-mail:");
+            const password = prompt("Podaj hasło:");
+            if (email && password) {
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(cred => alert("Zalogowano pomyślnie: " + cred.user.email))
+                    .catch(err => alert("Błąd logowania: " + err.message));
+            }
+        });
+
+        // Wylogowanie
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // Pokazywanie talii
+        document.getElementById('decksBtn').addEventListener('click', () => {
+            const user = auth.currentUser;
+            console.log("Kliknięto 'Pokaż Talie', aktualny użytkownik:", user);
+            if (user) {
+                decksListEl.innerHTML = 'Ładowanie...';
+                db.collection('decks').where('userId', '==', user.uid).get()
+                    .then(snapshot => {
+                        if (snapshot.empty) {
+                            decksListEl.textContent = 'Brak talii dla tego użytkownika.';
+                            return;
+                        }
+                        decksListEl.innerHTML = '';
+                        snapshot.forEach(doc => {
+                            decksListEl.innerHTML += `<p>${doc.data().name} (ID: ${doc.id})</p>`;
+                        });
+                    })
+                    .catch(err => {
+                        console.error("Błąd pobierania talii:", err);
+                        decksListEl.textContent = 'Błąd pobierania talii: ' + err.message;
+                    });
+            } else {
+                alert('Nie jesteś zalogowany. Najpierw się zaloguj.');
+            }
+        });
+    </script>
+
+</body>
+</html>

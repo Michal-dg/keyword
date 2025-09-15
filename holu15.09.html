@@ -1,62 +1,49 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Keyword: Master English</title>
-
-  <!-- UI & biblioteki -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Firebase CDN (v9 compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-
-  <!-- Czcionki + PWA -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0284c7" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Keyword" />
-
-  <!-- Własne krótkie style globalne -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Keyword">
   <style>
     body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; }
-    .card { transform-style: preserve-3d; transition: transform .6s; }
+    .card { transform-style: preserve-3d; transition: transform 0.6s; }
     .card.is-flipped { transform: rotateY(180deg); }
-    .card-face { position:absolute;width:100%;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(0); }
+    .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: translateZ(0); }
     .card-face-back { transform: rotateY(180deg) translateZ(1px); }
-    .btn-difficulty { transition: all .2s ease-in-out; }
-    .btn-difficulty:hover { transform: translateY(-2px); box-shadow:0 4px 10px rgba(0,0,0,.1); }
-    .modal { transition: opacity .3s ease; }
-    .modal-content { transition: transform .3s ease; }
-    #header-image-container:hover #upload-header-btn,
-    .card-face-front:hover #upload-global-bg-btn { opacity:1; }
+    .btn-difficulty { transition: all 0.2s ease-in-out; }
+    .btn-difficulty:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .modal { transition: opacity 0.3s ease; }
+    .modal-content { transition: transform 0.3s ease; }
+    #header-image-container:hover #upload-header-btn, .card-face-front:hover #upload-global-bg-btn { opacity: 1; }
   </style>
 </head>
-
 <body class="bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen">
-
-  <!-- ukryte inputy plików -->
-  <input type="file" id="image-upload-input" class="hidden" accept="image/*" />
-  <input type="file" id="header-upload-input" class="hidden" accept="image/*" />
-  <input type="file" id="story-upload-input"  class="hidden" accept=".txt"   />
-  <input type="file" id="global-bg-upload-input" class="hidden" accept="image/*" />
-  <input type="file" id="story-bg-upload-input"  class="hidden" accept="image/*" />
+  <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="header-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="story-upload-input" class="hidden" accept=".txt">
+  <input type="file" id="global-bg-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="story-bg-upload-input" class="hidden" accept="image/*">
 
   <div id="app" class="w-full max-w-md mx-auto p-4 sm:p-6">
-
-    <!-- ===== HEADER ===== -->
     <header class="text-center mb-4">
       <div id="header-image-container" class="relative w-full aspect-[3.5/1] bg-slate-200 rounded-lg mb-4 overflow-hidden group">
-        <img id="header-image" src="images/default-header.jpg" alt="Header" class="w-full h-full object-cover" />
-        <button id="upload-header-btn" class="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <img id="header-image" src="images/default-header.jpg" alt="Header" class="w-full h-full object-cover">
+        <button id="upload-header-btn" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
           <span class="ml-2">Change Photo</span>
         </button>
       </div>
@@ -64,44 +51,39 @@
       <p class="text-slate-500 mt-1">Master English, word by word!</p>
     </header>
 
-    <!-- ===== NAV ===== -->
     <nav class="relative flex justify-center items-center space-x-2 sm:space-x-4 mb-6 border-b pb-4">
       <button id="show-auth-btn" title="User Account" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <svg id="auth-icon-user" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <svg id="auth-icon-logout" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
       </button>
       <button id="show-decks-btn" title="Decks" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 16V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="M20 12v4H4v-4"/><path d="M4 8h16"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"></path><path d="M20 12v4H4v-4"></path><path d="M4 8h16"></path></svg>
       </button>
       <button id="show-learned-words-btn" title="Learned Words" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
       </button>
       <button id="show-stats-btn" title="Progress Chart" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
       </button>
       <button id="show-stories-btn" title="Story Library" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"></path></svg>
       </button>
       <button id="show-review-btn" title="Review Session" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
       </button>
     </nav>
 
-    <!-- ===== MAIN CONTENT ===== -->
     <main id="main-content">
-
-      <!-- aktywna talia -->
       <div class="text-center mb-4">
         <p class="text-sm text-slate-500">
           Active Deck: <strong id="active-deck-name" class="text-sky-600"></strong>
         </p>
       </div>
 
-      <!-- LOADING -->
       <div id="loading-state" class="text-center p-8">
         <p class="text-slate-500">Loading application and database...</p>
       </div>
 
-      <!-- SUMMARY -->
       <div id="summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
         <h2 class="text-2xl font-bold mb-4">Great work!</h2>
         <p class="text-slate-600 mb-6">Masz świetną passę. Tak trzymaj!</p>
@@ -110,30 +92,27 @@
         </button>
       </div>
 
-      <!-- LEARNING -->
       <div id="learning-state" class="hidden">
         <div class="flex justify-between items-center mb-4 text-sm">
           <div class="bg-sky-100 text-sky-700 font-semibold px-3 py-1 rounded-full">New: <span id="new-count">0</span></div>
           <div id="learned-counter-container" class="flex items-center space-x-2 bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-full text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             <span><span id="learned-count">0</span></span>
           </div>
           <div class="bg-amber-100 text-amber-700 font-semibold px-3 py-1 rounded-full">To Review: <span id="review-count">0</span></div>
         </div>
 
-        <!-- FLASHCARD -->
         <div id="flashcard-container" class="perspective-1000">
           <div id="flashcard" class="card w-full h-[320px] sm:h-[350px] relative">
-            <!-- front -->
             <div class="card-face card-face-front group flex flex-col items-center justify-center rounded-2xl shadow-lg p-6 text-center overflow-hidden">
-              <img id="card-front-bg" src="images/default-card-bg.jpg" class="absolute inset-0 w-full h-full object-cover" />
+              <img id="card-front-bg" src="images/default-card-bg.jpg" class="absolute inset-0 w-full h-full object-cover">
               <div id="card-front-overlay" class="absolute inset-0 bg-black/60 rounded-2xl"></div>
               <button id="upload-global-bg-btn" title="Change card background" class="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition opacity-0 group-hover:opacity-100">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               </button>
               <div class="relative z-10 flex flex-col items-center justify-between h-full w-full">
                 <button id="speak-btn-front" class="self-start text-white hover:text-slate-200 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                 </button>
                 <div class="flex-grow flex flex-col items-center justify-center">
                   <p class="text-slate-200 text-sm mb-4">Word <span id="card-rank">#1</span></p>
@@ -145,12 +124,11 @@
               </div>
             </div>
 
-            <!-- back -->
             <div class="card-face card-face-back flex flex-col justify-between bg-sky-500 text-white rounded-2xl shadow-lg p-4 text-center">
               <div class="relative w-full h-32">
-                <img id="card-image" src="" alt="Helpful image" class="w-full h-full object-cover rounded-lg bg-sky-400" />
+                <img id="card-image" src="" alt="Helpful image" class="w-full h-full object-cover rounded-lg bg-sky-400">
                 <button id="add-image-btn" title="Add/Change image" class="absolute top-2 right-2 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                 </button>
               </div>
               <div class="flex-grow flex flex-col justify-center">
@@ -161,20 +139,18 @@
                 </div>
               </div>
               <button id="speak-btn-back" class="absolute top-4 left-4 text-sky-100 hover:text-white transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Difficulty buttons -->
         <div id="difficulty-buttons" class="hidden grid grid-cols-2 gap-3 mt-6">
           <button data-difficulty="1" class="btn-difficulty bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600 text-3xl">👎</button>
           <button data-difficulty="3" class="btn-difficulty bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 text-3xl">👍</button>
         </div>
       </div>
 
-      <!-- TEST -->
       <div id="test-state" class="hidden">
         <div class="bg-white p-6 rounded-2xl shadow-lg">
           <div class="flex justify-between items-center mb-4">
@@ -187,7 +163,6 @@
         </div>
       </div>
 
-      <!-- TEST SUMMARY -->
       <div id="test-summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
         <h2 class="text-2xl font-bold mb-4">Test Results</h2>
         <p class="text-slate-600 mb-6 text-4xl"><span id="test-score">0</span> / <span id="test-summary-total">0</span></p>
@@ -195,7 +170,6 @@
           Back to Main Menu
         </button>
       </div>
-
     </main>
 
     <footer class="text-center mt-6">
@@ -203,15 +177,14 @@
     </footer>
   </div>
 
-  <!-- ======= MODALS ======= -->
   <!-- Decks modal -->
-  <div id="decks-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="decks-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold">Decks</h2>
         <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
       </header>
-      <div id="decks-list" class="p-4 overflow-y-auto flex-grow"></div>
+      <div id="decks-list" class="p-4 overflow-y-auto"></div>
       <div class="p-4 border-t">
         <form id="add-deck-form" class="flex gap-2">
           <input type="text" id="new-deck-name" placeholder="New deck name..." class="flex-grow block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" required>
@@ -219,7 +192,7 @@
         </form>
       </div>
 
-      <!-- szczegóły talii -->
+      <!-- Szczegóły talii -->
       <div id="deck-details-view" class="p-4 border-t hidden">
         <h3 class="font-bold mb-2 flex items-center gap-2">
           Słówka w talii:
@@ -233,18 +206,18 @@
   </div>
 
   <!-- Learned words modal -->
-  <div id="learned-words-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="learned-words-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-height-[90vh] flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold">Learned Words (<span id="learned-words-count">0</span>)</h2>
         <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
       </header>
-      <div id="learned-words-list" class="p-4 overflow-y-auto flex-grow"></div>
+      <div id="learned-words-list" class="p-4 overflow-y-auto"></div>
     </div>
   </div>
 
   <!-- Stats modal -->
-  <div id="stats-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="stats-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold">Learning Progress</h2>
@@ -257,7 +230,7 @@
   </div>
 
   <!-- Stories modal -->
-  <div id="stories-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="stories-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold">Story Library</h2>
@@ -271,7 +244,7 @@
   </div>
 
   <!-- Story viewer modal -->
-  <div id="story-viewer-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="story-viewer-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div id="story-viewer-bg-container" class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 bg-cover bg-center">
       <header class="flex justify-between items-center p-4 border-b bg-white/70 backdrop-blur-none rounded-t-2xl">
         <h2 id="story-viewer-title" class="text-xl font-bold truncate">...</h2>
@@ -287,15 +260,15 @@
           <input type="range" id="speed-slider" min="0.5" max="1.5" value="1" step="0.1" class="w-24">
         </div>
         <button id="listen-full-story-btn" class="bg-sky-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors flex items-center space-x-2">
-          <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
-          <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>
+          <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+          <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12"></rect></svg>
         </button>
       </footer>
     </div>
   </div>
 
   <!-- Add words modal -->
-  <div id="add-word-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="add-word-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold">Add words to deck: <span id="add-word-deck-name" class="text-sky-600"></span></h2>
@@ -316,7 +289,7 @@
   </div>
 
   <!-- Review modal -->
-  <div id="review-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="review-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold">Review Session</h2>
@@ -352,7 +325,7 @@
   </div>
 
   <!-- Auth modal -->
-  <div id="auth-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
+  <div id="auth-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
     <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col transform scale-95">
       <header class="flex justify-between items-center p-4 border-b">
         <h2 class="text-xl font-bold">Login or Register</h2>
@@ -394,17 +367,15 @@
     </div>
   </div>
 
-  <!-- Verify e-mail banner -->
-  <div id="verify-email-container" style="display:none;text-align:center;margin:2rem;padding:20px;background:#fffaeb;border:1px solid #fde047;border-radius:8px;">
-    <h2 style="font-size:1.5em;margin-bottom:10px;">Proszę, zweryfikuj swój adres e-mail</h2>
-    <p>Wysłaliśmy link weryfikacyjny na adres <strong id="verify-email-address"></strong>.</p>
-    <p style="font-size:.9em;color:#555;margin-top:5px;">Sprawdź również folder SPAM.</p>
-    <div style="margin-top:20px;">
-      <button id="resend-verification-button" style="padding:8px 16px;background:#3b82f6;color:white;border-radius:5px;border:none;cursor:pointer;">Wyślij e-mail ponownie</button>
+<div id="verify-email-container" style="display: none; text-align: center; margin: 2rem; padding: 20px; background-color: #fffaeb; border: 1px solid #fde047; border-radius: 8px;">
+        <h2 style="font-size: 1.5em; margin-bottom: 10px;">Proszę, zweryfikuj swój adres e-mail</h2>
+        <p>Wysłaliśmy link weryfikacyjny na adres <strong id="verify-email-address"></strong>.</p>
+        <p style="font-size: 0.9em; color: #555; margin-top: 5px;">Sprawdź również folder SPAM.</p>
+        <div style="margin-top: 20px;">
+            <button id="resend-verification-button" style="padding: 8px 16px; background-color: #3b82f6; color: white; border-radius: 5px; border: none; cursor: pointer;">Wyślij e-mail ponownie</button>
+            </div>
     </div>
-  </div>
 
-  <!-- ===== SERVICE WORKER ===== -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -414,8 +385,6 @@
       });
     }
   </script>
-
-  <!-- ===== ENTRY POINT ===== -->
   <script type="module" src="/src/app.js"></script>
 </body>
 </html>
