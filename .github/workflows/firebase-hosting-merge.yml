@@ -1,23 +1,41 @@
-# .github/workflows/firebase-hosting-merge.yml
-# --------------------------------------------
 name: Deploy to Firebase Hosting on merge
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:        # pozwala kliknąć „Run workflow” ręcznie
+  workflow_dispatch:
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1 ▸ pobranie kodu
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2 ▸ ustawienie Node (18 LTS)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # 3 ▸ instalacja zależności
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      # 4 ▸ budowanie aplikacji Vite
+      - name: Build Vite app
+        env:
+          VITE_GOOGLE_API: ${{ secrets.VITE_GOOGLE_API }}
+        run: |
+          npm run build      # Vite wypisze dist/ albo public/
+
+      # 5 ▸ deploy do Firebase Hosting
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
-        with:                     # ← TEN wiersz jest w tym samym wcięciu co „uses”
+        with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           token:     ${{ secrets.FIREBASE_TOKEN }}
           channelId: live
