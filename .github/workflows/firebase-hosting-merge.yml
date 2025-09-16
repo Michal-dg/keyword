@@ -30,7 +30,7 @@ jobs:
       # 5) deploy – sekcja była już w pliku, zostaw nazwę sekre­tów taką,
       # jaka utworzyła się podczas pierwszej integracji z Firebase
       - name: Deploy to Firebase
-        uses: FirebaseExtended/action-hosting-deploy@v1
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_ENGLISH_KEYWORD }}'
