@@ -3,3 +3,8 @@ node_modules
 # Local Netlify folder
 .netlify
 credentials.json
+# build output
+public/assets/
+public/*.js
+public/*.css
+public/*.html
