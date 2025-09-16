@@ -18,6 +18,9 @@ jobs:
         with:
           node-version: 18
 
+      - name: Downgrade npm (work-around Rollup native bug)
+        run: npm install -g npm@9         # ↓ tu kończy się krok
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
