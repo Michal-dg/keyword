@@ -40,7 +40,7 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: your-firebase-project-id
+          projectId: englishapp-ff793
           channelId: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || 'live' }}
         env:
           VITE_GOOGLE_API: ${{ secrets.VITE_GOOGLE_API }}
