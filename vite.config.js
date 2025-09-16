@@ -1,11 +1,12 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: '.',
-  publicDir: false,          // NIC nie będzie kopiowane z public/
+  root: '.',          // katalog źródłowy (tam, gdzie package.json)
+  publicDir: false,   // nic nie kopiujemy z public/ w trybie dev
   build: {
-    outDir: 'public',        // wynik ląduje tu, a Firebase wysyła ten folder
-    emptyOutDir: true,
+    outDir: 'public',     // Vite zapisuje build prosto do ./public
+    emptyOutDir: true,    // przy każdym buildzie czyści stary public/
     rollupOptions: {
       input: './index.html'
     }
