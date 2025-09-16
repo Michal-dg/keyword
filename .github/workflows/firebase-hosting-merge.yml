@@ -1,38 +1,40 @@
+# .github/workflows/firebase-hosting-merge.yml
 name: Deploy to Firebase Hosting on merge
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [main]
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # 1) pobiera kod
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
+      # 2) Dla pewności wymuś npm 9 (jeśli chcesz uniknąć bugów npm 10)
+      - name: Use npm 9
+        run: |
+          corepack enable
+          corepack prepare npm@9 --activate
 
-      - name: Downgrade npm (work-around Rollup native bug)
-        run: npm install -g npm@9         # ↓ tu kończy się krok
-
+      # 3) instalacja paczek z lockfile
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
+      # 4) build Vite’a – TO dodajesz
       - name: Build Vite app
-        env:
-          VITE_GOOGLE_API: ${{ secrets.VITE_GOOGLE_API }}
         run: npm run build
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      # 5) deploy – sekcja była już w pliku, zostaw nazwę sekre­tów taką,
+      # jaka utworzyła się podczas pierwszej integracji z Firebase
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v1
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          token:     ${{ secrets.FIREBASE_TOKEN }}
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_ENGLISH_KEYWORD }}'
           channelId: live
-          projectId: englishapp-ff793
+          projectId: english-keyword
+        env:
+          FIREBASE_CLI_PREVIEWS: hostingchannels
