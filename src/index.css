@@ -1,0 +1,42 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scrollbar-gutter: stable both-edges; }
+}
+
+@layer components {
+  /* każdy przycisk w nav ma stały kwadratowy rozmiar i centrowanie ikon */
+  .nav-btn {
+    @apply relative grid place-items-center w-11 h-11 rounded-full bg-slate-100 text-slate-500 transition-colors;
+  }
+  .nav-btn:hover { @apply bg-sky-100 text-sky-600; }
+  .nav-icon { @apply w-6 h-6; }
+}
+@layer base {
+  html { scrollbar-gutter: stable both-edges; }
+}
+
+@layer components {
+  /* tylko przycisk logowania – bez zmiany wyglądu reszty */
+  #show-auth-btn {
+    display: grid;           /* idealne centrowanie ikony */
+    place-items: center;
+    line-height: 0;          /* brak „rozpychania” przez linię */
+  }
+  #show-auth-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+/* Auth modal: fallback ukrycia, gdyby klasy Tailwind nie zadziałały */
+#auth-modal[aria-hidden="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+#auth-modal .modal-content {
+  transform: scale(0.95);
+  transition: transform 200ms ease, opacity 200ms ease;
+}

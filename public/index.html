@@ -1,61 +1,54 @@
+<!-- src/index.html  -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Keyword: Master English</title>
 
-  <!-- UI & biblioteki -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Firebase CDN (v9 compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-
-  <!-- Czcionki + PWA -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- PWA / favicon -->
   <link rel="manifest" href="/assets/manifest-D4FDNF8k.json" />
   <meta name="theme-color" content="#0284c7" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Keyword" />
+  <link rel="icon" href="/favicon.ico" />
 
-  <!-- Własne krótkie style globalne -->
+  <!-- Inter -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
   <style>
-    body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; }
-    .card { transform-style: preserve-3d; transition: transform .6s; }
-    .card.is-flipped { transform: rotateY(180deg); }
-    .card-face { position:absolute;width:100%;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(0); }
-    .card-face-back { transform: rotateY(180deg) translateZ(1px); }
-    .btn-difficulty { transition: all .2s ease-in-out; }
-    .btn-difficulty:hover { transform: translateY(-2px); box-shadow:0 4px 10px rgba(0,0,0,.1); }
-    .modal { transition: opacity .3s ease; }
-    .modal-content { transition: transform .3s ease; }
-    #header-image-container:hover #upload-header-btn,
-    .card-face-front:hover #upload-global-bg-btn { opacity:1; }
+    body{font-family:'Inter',sans-serif;overscroll-behavior-y:contain}
+    .card{transform-style:preserve-3d;transition:transform .6s}
+    .card.is-flipped{transform:rotateY(180deg)}
+    .card-face{position:absolute;width:100%;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(0)}
+    .card-face-back{transform:rotateY(180deg) translateZ(1px)}
+    .btn-difficulty{transition:.2s}
+    .btn-difficulty:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.1)}
+    .modal{transition:opacity .3s}
+    .modal-content{transition:transform .3s}
+    .nav-btn{padding:.75rem;background:#f1f5f9;border-radius:9999px;color:#64748b;transition:.2s}
+    .nav-btn:hover{background:#e0f2fe;color:#0284c7}
+    .nav-icon{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   </style>
-  <script type="module" crossorigin src="/assets/index-juGADXl8.js"></script>
-</head>
+  <script type="module" crossorigin src="/assets/index-YjgCW3oY.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Cp8JrQt_.css">
+<link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 
 <body class="bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen">
 
   <!-- ukryte inputy plików -->
-  <input type="file" id="image-upload-input" class="hidden" accept="image/*" />
-  <input type="file" id="header-upload-input" class="hidden" accept="image/*" />
-  <input type="file" id="story-upload-input"  class="hidden" accept=".txt"   />
-  <input type="file" id="global-bg-upload-input" class="hidden" accept="image/*" />
-  <input type="file" id="story-bg-upload-input"  class="hidden" accept="image/*" />
+  <input type="file" id="image-upload-input"     class="hidden" accept="image/*">
+  <input type="file" id="header-upload-input"    class="hidden" accept="image/*">
+  <input type="file" id="story-upload-input"     class="hidden" accept=".txt">
+  <input type="file" id="global-bg-upload-input" class="hidden" accept="image/*">
+  <input type="file" id="story-bg-upload-input"  class="hidden" accept="image/*">
 
+  <!-- APP -->
   <div id="app" class="w-full max-w-md mx-auto p-4 sm:p-6">
 
-    <!-- ===== HEADER ===== -->
+    <!-- HEADER -->
     <header class="text-center mb-4">
       <div id="header-image-container" class="relative w-full aspect-[3.5/1] bg-slate-200 rounded-lg mb-4 overflow-hidden group">
-        <img id="header-image" src="/assets/default-header-CJueh5LQ.jpg" alt="Header" class="w-full h-full object-cover" />
+        <img id="header-image" src="/assets/default-header-CJueh5LQ.jpg" alt="Header" class="w-full h-full object-cover">
         <button id="upload-header-btn" class="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <span class="ml-2">Change Photo</span>
@@ -65,357 +58,256 @@
       <p class="text-slate-500 mt-1">Master English, word by word!</p>
     </header>
 
-    <!-- ===== NAV ===== -->
-    <nav class="relative flex justify-center items-center space-x-2 sm:space-x-4 mb-6 border-b pb-4">
-      <button id="show-auth-btn" title="User Account" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </button>
-      <button id="show-decks-btn" title="Decks" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 16V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="M20 12v4H4v-4"/><path d="M4 8h16"/></svg>
-      </button>
-      <button id="show-learned-words-btn" title="Learned Words" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      </button>
-      <button id="show-stats-btn" title="Progress Chart" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      </button>
-      <button id="show-stories-btn" title="Story Library" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"/></svg>
-      </button>
-      <button id="show-review-btn" title="Review Session" class="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/></svg>
-      </button>
+    <!-- NAV -->
+    <nav class="relative mb-6 border-b pb-4 overflow-x-auto" aria-label="Główna nawigacja">
+      <div class="flex flex-nowrap items-center justify-center gap-2 sm:gap-4 w-max">
+
+        <button type="button" id="show-auth-btn" title="User Account"
+                class="shrink-0 inline-flex items-center justify-center p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+          <svg id="auth-icon-user" class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <svg id="auth-icon-logout" class="hidden pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+
+        <button type="button" id="show-decks-btn" title="Decks"
+                class="shrink-0 inline-flex items-center justify-center p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+          <svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 16V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="M20 12v4H4v-4"/><path d="M4 8h16"/>
+          </svg>
+        </button>
+
+        <button type="button" id="show-learned-words-btn" title="Learned Words"
+                class="shrink-0 inline-flex items-center justify-center p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+          <svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+        </button>
+
+        <button type="button" id="show-stats-btn" title="Progress Chart"
+                class="shrink-0 inline-flex items-center justify-center p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+          <svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </button>
+
+        <button type="button" id="show-stories-btn" title="Story Library"
+                class="shrink-0 inline-flex items-center justify-center p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+          <svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1-3-3h7z"></path>
+          </svg>
+        </button>
+
+        <button type="button" id="show-review-btn" title="Review Session"
+                class="shrink-0 inline-flex items-center justify-center p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-sky-100 hover:text-sky-600 transition-colors">
+          <svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 2v6h6"/><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 22v-6h-6"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/>
+          </svg>
+        </button>
+
+      </div>
     </nav>
 
-    <!-- ===== MAIN CONTENT ===== -->
-    <main id="main-content">
-
-      <!-- aktywna talia -->
+    <!-- MAIN -->
+    <main>
       <div class="text-center mb-4">
-        <p class="text-sm text-slate-500">
-          Active Deck: <strong id="active-deck-name" class="text-sky-600"></strong>
-        </p>
+        <span class="text-sm text-slate-500">Aktywna talia:</span>
+        <span id="active-deck-name" class="font-semibold text-sky-600">None</span>
       </div>
 
-      <!-- LOADING -->
       <div id="loading-state" class="text-center p-8">
-        <p class="text-slate-500">Loading application and database...</p>
+        <p class="text-slate-500">Loading application and database…</p>
       </div>
 
-      <!-- SUMMARY -->
-      <div id="summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
-        <h2 class="text-2xl font-bold mb-4">Great work!</h2>
-        <p class="text-slate-600 mb-6">Masz świetną passę. Tak trzymaj!</p>
-        <button id="start-new-session-early" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">
-          Keep going!
-        </button>
-      </div>
-
-      <!-- LEARNING -->
-      <div id="learning-state" class="hidden">
-        <div class="flex justify-between items-center mb-4 text-sm">
-          <div class="bg-sky-100 text-sky-700 font-semibold px-3 py-1 rounded-full">New: <span id="new-count">0</span></div>
-          <div id="learned-counter-container" class="flex items-center space-x-2 bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-full text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            <span><span id="learned-count">0</span></span>
-          </div>
-          <div class="bg-amber-100 text-amber-700 font-semibold px-3 py-1 rounded-full">To Review: <span id="review-count">0</span></div>
-        </div>
-
-        <!-- FLASHCARD -->
-        <div id="flashcard-container" class="perspective-1000">
-          <div id="flashcard" class="card w-full h-[320px] sm:h-[350px] relative">
-            <!-- front -->
-            <div class="card-face card-face-front group flex flex-col items-center justify-center rounded-2xl shadow-lg p-6 text-center overflow-hidden">
-              <img id="card-front-bg" src="/assets/default-card-bg-BCOgC-ad.jpg" class="absolute inset-0 w-full h-full object-cover" />
-              <div id="card-front-overlay" class="absolute inset-0 bg-black/60 rounded-2xl"></div>
-              <button id="upload-global-bg-btn" title="Change card background" class="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition opacity-0 group-hover:opacity-100">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              </button>
-              <div class="relative z-10 flex flex-col items-center justify-between h-full w-full">
-                <button id="speak-btn-front" class="self-start text-white hover:text-slate-200 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                </button>
-                <div class="flex-grow flex flex-col items-center justify-center">
-                  <p class="text-slate-200 text-sm mb-4">Word <span id="card-rank">#1</span></p>
-                  <p id="card-english" class="text-4xl sm:text-5xl font-bold text-white"></p>
-                </div>
-                <button id="show-answer-btn" class="bg-white/20 text-white font-semibold py-2 px-6 rounded-lg hover:bg-white/40 transition-colors">
-                  Show Answer
-                </button>
-              </div>
-            </div>
-
-            <!-- back -->
-            <div class="card-face card-face-back flex flex-col justify-between bg-sky-500 text-white rounded-2xl shadow-lg p-4 text-center">
-              <div class="relative w-full h-32">
-                <img id="card-image" src="" alt="Helpful image" class="w-full h-full object-cover rounded-lg bg-sky-400" />
-                <button id="add-image-btn" title="Add/Change image" class="absolute top-2 right-2 p-2 bg-white/50 hover:bg-white/80 text-sky-800 rounded-full backdrop-blur-sm transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                </button>
-              </div>
-              <div class="flex-grow flex flex-col justify-center">
-                <p id="card-polish" class="text-3xl sm:text-4xl font-bold mb-2"></p>
-                <div class="text-sky-100 italic">
-                  <p id="card-example-en" class="mb-1"></p>
-                  <p id="card-example-pl" class="text-sm"></p>
-                </div>
-              </div>
-              <button id="speak-btn-back" class="absolute top-4 left-4 text-sky-100 hover:text-white transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Difficulty buttons -->
-        <div id="difficulty-buttons" class="hidden grid grid-cols-2 gap-3 mt-6">
-          <button data-difficulty="1" class="btn-difficulty bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600 text-3xl">👎</button>
-          <button data-difficulty="3" class="btn-difficulty bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 text-3xl">👍</button>
-        </div>
-      </div>
-
-      <!-- TEST -->
-      <div id="test-state" class="hidden">
-        <div class="bg-white p-6 rounded-2xl shadow-lg">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold">Test</h2>
-            <p class="text-slate-500"><span id="test-current-question">1</span> / <span id="test-total-questions">10</span></p>
-          </div>
-          <p id="test-question" class="text-3xl font-bold text-center mb-6 h-16"></p>
-          <div id="test-answers" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-          <button id="test-next-btn" class="hidden w-full mt-6 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600">Next Question</button>
-        </div>
-      </div>
-
-      <!-- TEST SUMMARY -->
-      <div id="test-summary-state" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
-        <h2 class="text-2xl font-bold mb-4">Test Results</h2>
-        <p class="text-slate-600 mb-6 text-4xl"><span id="test-score">0</span> / <span id="test-summary-total">0</span></p>
-        <button id="back-to-main-menu-btn" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">
-          Back to Main Menu
-        </button>
-      </div>
-
+      <section id="review-screen" class="hidden">
+        <div id="flashcard-container" class="relative w-full h-60 mb-4"></div>
+        <div id="srs-controls" class="flex justify-center gap-3"></div>
+      </section>
     </main>
 
     <footer class="text-center mt-6">
-      <button id="reset-progress" class="text-xs text-slate-400 hover:text-red-500 hover:underline">Reset Progress</button>
+      <button id="reset-progress" class="text-xs text-slate-400 hover:text-red-500 hover:underline">
+        Reset Progress
+      </button>
     </footer>
   </div>
 
-  <!-- ======= MODALS ======= -->
-  <!-- Decks modal -->
-  <div id="decks-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
-      <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Decks</h2>
-        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
-      </header>
-      <div id="decks-list" class="p-4 overflow-y-auto flex-grow"></div>
-      <div class="p-4 border-t">
-        <form id="add-deck-form" class="flex gap-2">
-          <input type="text" id="new-deck-name" placeholder="New deck name..." class="flex-grow block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500" required>
-          <button type="submit" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors text-sm">Create</button>
-        </form>
-      </div>
-
-      <!-- szczegóły talii -->
-      <div id="deck-details-view" class="p-4 border-t hidden">
-        <h3 class="font-bold mb-2 flex items-center gap-2">
-          Słówka w talii:
-          <span id="deck-details-name" class="text-sky-600"></span>
-          <span id="deck-details-source-badge" class="text-xs px-2 py-1 rounded-full bg-slate-200 text-slate-700"></span>
-        </h3>
-        <div id="deck-details-words" class="max-h-48 overflow-y-auto border rounded-lg p-2 bg-slate-50"></div>
-        <button id="open-add-word-modal-btn" class="w-full mt-4 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors text-sm">Add Words to this Deck</button>
-      </div>
+  <!-- banner verify-email (opcjonalny) -->
+  <div id="verify-email-container" style="display:none;text-align:center;margin:2rem;padding:20px;background:#fffaeb;border:1px solid #fde047;border-radius:8px;">
+    <h2 style="font-size:1.5em;margin-bottom:10px;">Proszę, zweryfikuj swój adres e-mail</h2>
+    <p>Wysłaliśmy link weryfikacyjny na adres <strong id="verify-email-address"></strong>.</p>
+    <p style="font-size:.9em;color:#555;margin-top:5px;">Sprawdź także folder SPAM.</p>
+    <div style="margin-top:20px;">
+      <button id="resend-verification-button" style="padding:8px 16px;background:#3b82f6;color:white;border-radius:5px;border:none;cursor:pointer;">
+        Wyślij ponownie
+      </button>
     </div>
   </div>
 
-  <!-- Learned words modal -->
-  <div id="learned-words-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-height-[90vh] flex flex-col transform scale-95">
+  <!-- ——— MODALE ——— -->
+  <div id="decks-modal"    class="modal fixed inset-0 bg-black/40 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-lg w-full max-w-sm translate-y-4">
       <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Learned Words (<span id="learned-words-count">0</span>)</h2>
-        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+        <h2 class="text-xl font-bold">Moje talie</h2>
+        <button onclick="document.querySelector('#decks-modal').classList.add('opacity-0','pointer-events-none')">&times;</button>
       </header>
-      <div id="learned-words-list" class="p-4 overflow-y-auto flex-grow"></div>
-    </div>
-  </div>
-
-  <!-- Stats modal -->
-  <div id="stats-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
-      <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Learning Progress</h2>
-        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
-      </header>
-      <div class="p-4">
-        <canvas id="stats-chart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stories modal -->
-  <div id="stories-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95">
-      <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Story Library</h2>
-        <button id="add-story-btn" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors text-sm">Add New</button>
-      </header>
-      <div id="stories-list" class="p-4 overflow-y-auto flex-grow"></div>
-      <footer class="p-2 border-t">
-        <button class="close-modal-btn w-full text-slate-500 hover:text-slate-800 p-2">Close</button>
-      </footer>
-    </div>
-  </div>
-
-  <!-- Story viewer modal -->
-  <div id="story-viewer-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div id="story-viewer-bg-container" class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 bg-cover bg-center">
-      <header class="flex justify-between items-center p-4 border-b bg-white/70 backdrop-blur-none rounded-t-2xl">
-        <h2 id="story-viewer-title" class="text-xl font-bold truncate">...</h2>
-        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
-      </header>
-      <div id="story-viewer-content" class="p-6 overflow-y-auto flex-grow leading-relaxed bg-white/70 text-slate-900 backdrop-blur-none"></div>
-      <footer class="p-4 border-t flex justify-between items-center bg-white/70 backdrop-blur-none rounded-b-2xl">
-        <div class="flex items-center space-x-2">
-          <button id="upload-story-bg-btn" class="bg-slate-200 text-slate-700 font-semibold py-2 px-3 rounded-lg hover:bg-slate-300 transition-colors text-sm">Background</button>
-        </div>
-        <div class="flex items-center space-x-2">
-          <label for="speed-slider" class="text-sm text-slate-600">Speed:</label>
-          <input type="range" id="speed-slider" min="0.5" max="1.5" value="1" step="0.1" class="w-24">
-        </div>
-        <button id="listen-full-story-btn" class="bg-sky-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-600 transition-colors flex items-center space-x-2">
-          <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
-          <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>
-        </button>
-      </footer>
-    </div>
-  </div>
-
-  <!-- Add words modal -->
-  <div id="add-word-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
-      <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Add words to deck: <span id="add-word-deck-name" class="text-sky-600"></span></h2>
-        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
-      </header>
-      <form id="add-word-form" class="p-6 space-y-4">
-        <div>
-          <label for="bulk-words-input" class="block text-sm font-medium text-slate-700">Paste word list</label>
-          <p class="text-xs text-slate-500 mb-2">
-            Each word on a new line. Use a semicolon (;) to separate parts:
-            <code class="bg-slate-100 p-1 rounded">english;polish;english sentence;polish sentence</code>
-          </p>
-          <textarea id="bulk-words-input" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 h-48" placeholder="house;dom;This is my house.;To jest mój dom.&#10;to eat;jeść;I want to eat pizza.;Chcę zjeść pizzę."></textarea>
-        </div>
-        <button type="submit" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">Save Words</button>
+      <section id="decks-list" class="max-h-80 overflow-y-auto"></section>
+      <form id="add-deck-form" class="flex gap-2 p-4 border-t">
+        <input id="new-deck-name" class="flex-1 border rounded p-2" placeholder="Nazwa talii…" autocomplete="off">
+        <button class="px-3 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded">Dodaj</button>
       </form>
     </div>
   </div>
 
-  <!-- Review modal -->
-  <div id="review-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col transform scale-95">
+  <div id="learned-modal"  class="modal fixed inset-0 bg-black/40 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-lg w-full max-w-sm translate-y-4">
       <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Review Session</h2>
-        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+        <h2 class="text-xl font-bold">Nauczone słowa</h2>
+        <button onclick="document.querySelector('#learned-modal').classList.add('opacity-0','pointer-events-none')">&times;</button>
       </header>
-      <div class="p-6 space-y-4">
-        <div class="p-4 border rounded-lg">
-          <h3 class="font-semibold mb-2">Last 20 learned words</h3>
-          <div class="flex flex-wrap gap-2">
-            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="last" data-count="20">Normal Study</button>
-            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="20" data-direction="en2pl">Test EN→PL</button>
-            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="20" data-direction="pl2en">Test PL→EN</button>
-          </div>
-        </div>
-        <div class="p-4 border rounded-lg">
-          <h3 class="font-semibold mb-2">Last 50 learned words</h3>
-          <div class="flex flex-wrap gap-2">
-            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="last" data-count="50">Normal Study</button>
-            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="50" data-direction="en2pl">Test EN→PL</button>
-            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="last" data-count="50" data-direction="pl2en">Test PL→EN</button>
-          </div>
-        </div>
-        <div class="p-4 border rounded-lg">
-          <h3 class="font-semibold mb-2">Words learned today</h3>
-          <div class="flex flex-wrap gap-2">
-            <button class="review-btn-learn flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600" data-type="today">Normal Study</button>
-            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="today" data-direction="en2pl">Test EN→PL</button>
-            <button class="review-btn-test flex-1 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300" data-type="today" data-direction="pl2en">Test PL→EN</button>
-          </div>
-        </div>
-      </div>
+      <ul id="learned-list" class="max-h-80 overflow-y-auto p-4 space-y-2"></ul>
     </div>
   </div>
 
-  <!-- Auth modal -->
-  <div id="auth-modal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none">
-    <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col transform scale-95">
+  <div id="stats-modal"    class="modal fixed inset-0 bg-black/40 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-lg w-full max-w-sm translate-y-4 p-4">
+      <h2 class="text-xl font-bold mb-4">Statystyki postępu</h2>
+      <canvas id="stats-chart" width="350" height="250"></canvas>
+    </div>
+  </div>
+
+  <div id="stories-modal"  class="modal fixed inset-0 bg-black/40 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-content bg-white rounded-lg w-full max-w-sm translate-y-4">
       <header class="flex justify-between items-center p-4 border-b">
-        <h2 class="text-xl font-bold">Login or Register</h2>
-        <button class="close-modal-btn p-2 text-2xl text-slate-400 hover:text-slate-800">&times;</button>
+        <h2 class="text-xl font-bold">Biblioteka histori</h2>
+        <button onclick="document.querySelector('#stories-modal').classList.add('opacity-0','pointer-events-none')">&times;</button>
       </header>
+      <ul id="stories-list" class="max-h-80 overflow-y-auto p-4 space-y-2"></ul>
+    </div>
+  </div>
+
+  <!-- AUTH MODAL (jeden jedyny) -->
+  <div id="auth-modal" class="modal fixed inset-0 bg-black/40 flex items-center justify-center opacity-0 pointer-events-none">
+    <div class="modal-content relative w-full max-w-md mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-xl ring-1 ring-black/5 transform transition-transform duration-200 scale-95">
+      <button class="absolute top-2 right-2 p-2 rounded-full hover:bg-slate-100 text-slate-500" data-auth-close aria-label="Zamknij">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 8.586l4.95-4.95 1.414 1.414L11.414 10l4.95 4.95-1.414 1.414L10 11.414l-4.95 4.95-1.414-1.414L8.586 10 3.636 5.05l1.414-1.414L10 8.586z" clip-rule="evenodd"/></svg>
+      </button>
+
       <div class="p-6">
-        <form id="auth-form" class="space-y-4">
-          <div>
-            <label for="auth-email" class="block text-sm font-medium text-slate-700">Email</label>
-            <input type="email" id="auth-email" required autocomplete="email" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-          </div>
-          <div>
-            <label for="auth-password" class="block text-sm font-medium text-slate-700">Password</label>
-            <input type="password" id="auth-password" required autocomplete="current-password" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
-          </div>
-          <div id="auth-error-message" class="text-red-500 text-sm hidden"></div>
-          <div class="flex gap-4">
-            <button id="login-btn" type="submit" class="flex-1 bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-600 transition-colors">Login</button>
-            <button id="register-btn" type="submit" class="flex-1 bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg hover:bg-slate-300 transition-colors">Register</button>
-          </div>
-        </form>
+        <h2 id="auth-modal-title" class="text-lg font-semibold">Konto</h2>
+        <p id="auth-error" class="mt-3 text-sm font-medium text-red-600 hidden"></p>
+        <p id="auth-info"  class="mt-3 text-sm font-medium text-emerald-600 hidden"></p>
 
-        <div class="flex items-center justify-between mt-3 text-xs">
-          <button id="resend-confirm-btn" class="text-sky-600 hover:underline">Resend confirmation</button>
-          <button id="forgot-password-btn" class="text-slate-500 hover:underline">Forgot password?</button>
-        </div>
+        <!-- WIDOK NIEZALOGOWANY -->
+        <div id="auth-logged-out" class="mt-4 space-y-5">
 
-        <div id="auth-success-message" class="hidden mt-4 p-4 bg-green-100 text-green-700 rounded-lg text-center">
-          <p>We've sent a confirmation link to your email. Check your inbox to complete the registration.</p>
-        </div>
-        <div id="auth-login-success" class="hidden mt-4 p-2 bg-green-100 text-green-700 rounded text-center text-sm">
-          Logged in successfully.
-        </div>
-        <div id="user-info" class="hidden mt-4 text-center">
-          <p>Logged in as: <strong id="user-email-display"></strong></p>
-          <button id="logout-btn" class="mt-4 w-full bg-red-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
-        </div>
+          <button id="auth-google" class="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-slate-700 hover:bg-slate-50 transition">
+            <!-- logo Google -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C33.67 6.053 29.084 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.818C14.396 16.279 18.83 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C33.67 6.053 29.084 4 24 4c-7.89 0-14.535 4.559-17.694 10.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.742-1.977 13.255-5.197l-6.104-5.159C29.127 35.521 26.68 36.5 24 36.5c-5.205 0-9.62-3.318-11.281-7.949l-6.57 5.062C8.282 39.31 15.558 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.23 4.177-4.106 5.54l6.104 5.159C38.883 36.798 44 31.5 44 24c0-1.341-.138-2.651-.389-3.917z"/></svg>
+            Kontynuuj z Google
+          </button>
+
+          <div class="flex items-center gap-3 text-xs text-slate-400">
+            <span class="h-px flex-1 bg-slate-200"></span> lub e-mail <span class="h-px flex-1 bg-slate-200"></span>
+          </div>
+
+          <!-- Zakładki -->
+          <div class="flex rounded-lg bg-slate-100 p-0.5" role="tablist" aria-label="Tryb uwierzytelniania">
+            <button id="auth-tab-signin" role="tab" aria-selected="true"
+                    class="flex-1 rounded-md px-3 py-2 text-sm font-medium text-slate-700 bg-white shadow">
+              Logowanie
+            </button>
+            <button id="auth-tab-signup" role="tab" aria-selected="false"
+                    class="flex-1 rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-700">
+              Rejestracja
+            </button>
+          </div>
+
+          <!-- Logowanie -->
+          <form id="auth-form-signin" class="space-y-4" novalidate>
+            <div>
+              <label for="auth-email-in" class="block text-sm font-medium text-slate-700">E-mail</label>
+              <input id="auth-email-in" type="email" required autocomplete="email"
+                     class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-sky-500 focus:ring-sky-500">
+            </div>
+            <div>
+              <div class="flex items-center justify-between">
+                <label for="auth-password-in" class="block text-sm font-medium text-slate-700">Hasło</label>
+                <button type="button" id="auth-forgot" class="text-xs text-sky-600 hover:text-sky-700">Nie pamiętasz hasła?</button>
+              </div>
+              <div class="relative mt-1">
+                <input id="auth-password-in" type="password" required autocomplete="current-password"
+                       class="block w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 focus:border-sky-500 focus:ring-sky-500">
+                <button type="button" data-toggle-password="auth-password-in"
+                        class="absolute inset-y-0 right-2 my-auto text-slate-400 hover:text-slate-600">Pokaż</button>
+              </div>
+            </div>
+            <button id="auth-login-submit" type="submit"
+                    class="w-full inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2.5 text-white font-medium hover:bg-sky-700 focus:ring-2 focus:ring-sky-500 disabled:opacity-60">
+              Zaloguj się
+            </button>
+          </form>
+
+          <!-- Rejestracja -->
+          <form id="auth-form-signup" class="space-y-4 hidden" novalidate>
+            <div>
+              <label for="auth-email-up" class="block text-sm font-medium text-slate-700">E-mail</label>
+              <input id="auth-email-up" type="email" required autocomplete="email"
+                     class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-sky-500 focus:ring-sky-500">
+            </div>
+            <div>
+              <label for="auth-password-up" class="block text-sm font-medium text-slate-700">Hasło</label>
+              <div class="relative mt-1">
+                <input id="auth-password-up" type="password" required minlength="6" autocomplete="new-password"
+                       class="block w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 focus:border-sky-500 focus:ring-sky-500">
+                <button type="button" data-toggle-password="auth-password-up"
+                        class="absolute inset-y-0 right-2 my-auto text-slate-400 hover:text-slate-600">Pokaż</button>
+              </div>
+            </div>
+            <div>
+              <label for="auth-password-confirm" class="block text-sm font-medium text-slate-700">Powtórz hasło</label>
+              <input id="auth-password-confirm" type="password" required minlength="6" autocomplete="new-password"
+                     class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-sky-500 focus:ring-sky-500">
+            </div>
+            <button id="auth-register-submit" type="submit"
+                    class="w-full inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-white font-medium hover:bg-slate-700 focus:ring-2 focus:ring-slate-600 disabled:opacity-60">
+              Utwórz konto
+            </button>
+          </form>
+        </div><!-- /logged-out -->
+
+        <!-- WIDOK ZALOGOWANY -->
+        <div id="auth-logged-in" class="mt-4 hidden">
+          <div class="flex items-center gap-3">
+            <div id="auth-avatar" class="h-10 w-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-semibold">A</div>
+            <div class="min-w-0">
+              <div id="user-email-display" class="truncate font-medium"></div>
+              <div id="user-verified" class="text-xs text-emerald-600">Zweryfikowany e-mail</div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <button id="auth-resend-verification" class="text-xs text-sky-600 hover:underline hidden">Wyślij ponownie e-mail weryfikacyjny</button>
+          </div>
+
+          <div class="mt-6 grid grid-cols-2 gap-2">
+            <button id="logout-btn" class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2.5 text-slate-700 hover:bg-slate-50">Wyloguj</button>
+            <button id="auth-close" class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-white hover:bg-slate-700">Zamknij</button>
+          </div>
+        </div><!-- /logged-in -->
       </div>
     </div>
-  </div>
+  </div><!-- /#auth-modal -->
 
-  <!-- Verify e-mail banner -->
-  <div id="verify-email-container" style="display:none;text-align:center;margin:2rem;padding:20px;background:#fffaeb;border:1px solid #fde047;border-radius:8px;">
-    <h2 style="font-size:1.5em;margin-bottom:10px;">Proszę, zweryfikuj swój adres e-mail</h2>
-    <p>Wysłaliśmy link weryfikacyjny na adres <strong id="verify-email-address"></strong>.</p>
-    <p style="font-size:.9em;color:#555;margin-top:5px;">Sprawdź również folder SPAM.</p>
-    <div style="margin-top:20px;">
-      <button id="resend-verification-button" style="padding:8px 16px;background:#3b82f6;color:white;border-radius:5px;border:none;cursor:pointer;">Wyślij e-mail ponownie</button>
-    </div>
-  </div>
-
-  <!-- ===== SERVICE WORKER ===== -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(reg => console.log('Service worker registered.', reg))
-          .catch(err => console.log('Service worker registration failed:', err));
-      });
-    }
-  </script>
-
-  <!-- ===== ENTRY POINT ===== -->
+  <!-- ENTRY POINT -->
 </body>
 </html>
